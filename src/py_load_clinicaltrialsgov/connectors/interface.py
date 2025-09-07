@@ -30,12 +30,14 @@ class DatabaseConnectorInterface(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def execute_merge(self, table_name: str) -> None:
+    def execute_merge(self, table_name: str, primary_keys: List[str]) -> None:
         """
         Perform an UPSERT/MERGE from a staging table to the final table.
 
         Args:
             table_name: The name of the final target table.
+            primary_keys: A list of column names that form the natural
+                          primary key for the merge operation.
         """
         raise NotImplementedError
 
