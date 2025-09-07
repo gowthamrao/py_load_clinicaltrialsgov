@@ -33,6 +33,38 @@ def test_postgres_connector(postgres_container):
         cur.execute("SELECT COUNT(*) FROM studies")
         assert cur.fetchone()[0] == 1
 
+    # Test bulk load and merge for raw_studies (insert and update)
+    raw_studies_data_initial = pd.DataFrame([{
+        "nct_id": "NCT123",
+        "last_updated_api": datetime(2023, 1, 1),
+        "ingestion_timestamp": datetime.utcnow(),
+        "payload": '{"key": "initial_value"}'
+    }])
+    connector.bulk_load_staging("raw_studies", raw_studies_data_initial)
+    connector.execute_merge("raw_studies", ["nct_id"])
+
+    with connector.conn.cursor() as cur:
+        cur.execute("SELECT payload FROM raw_studies WHERE nct_id = 'NCT123'")
+        result = cur.fetchone()
+        assert result[0]["key"] == "initial_value"
+
+    # Now test the UPSERT (update)
+    raw_studies_data_updated = pd.DataFrame([{
+        "nct_id": "NCT123",
+        "last_updated_api": datetime(2023, 1, 2),
+        "ingestion_timestamp": datetime.utcnow(),
+        "payload": '{"key": "updated_value"}'
+    }])
+    connector.bulk_load_staging("raw_studies", raw_studies_data_updated)
+    connector.execute_merge("raw_studies", ["nct_id"])
+
+    with connector.conn.cursor() as cur:
+        cur.execute("SELECT payload FROM raw_studies WHERE nct_id = 'NCT123'")
+        result = cur.fetchone()
+        assert result[0]["key"] == "updated_value"
+        cur.execute("SELECT COUNT(*) FROM raw_studies")
+        assert cur.fetchone()[0] == 1 # Ensure no new record was created
+
     # Test history
     connector.record_load_history("SUCCESS", {"records": 1})
     timestamp = connector.get_last_successful_load_timestamp()

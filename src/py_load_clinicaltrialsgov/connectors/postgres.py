@@ -1,6 +1,6 @@
 import pandas as pd
 from typing import Dict, List, Any, Literal
-from datetime import datetime
+from datetime import datetime, UTC
 import psycopg
 
 from py_load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
@@ -56,11 +56,11 @@ class PostgresConnector(DatabaseConnectorInterface):
             cur.execute(f"SELECT column_name FROM information_schema.columns WHERE table_name = '{staging_table_name}'")
             columns = [row[0] for row in cur.fetchall()]
 
-            col_names = ", ".join(columns)
+            col_names = ", ".join(f'"{c}"' for c in columns)
             conflict_target = ", ".join(primary_keys)
-            update_cols = ", ".join([f"{col} = EXCLUDED.{col}" for col in columns if col not in primary_keys])
+            update_cols = ", ".join([f'"{col}" = EXCLUDED."{col}"' for col in columns if col not in primary_keys])
 
-            if table_name == "studies":
+            if table_name == "studies" or table_name == "raw_studies":
                 merge_sql = f"""
                     INSERT INTO {table_name} ({col_names})
                     SELECT {col_names} FROM {staging_table_name}
@@ -101,7 +101,7 @@ class PostgresConnector(DatabaseConnectorInterface):
         with self.conn.cursor() as cur:
             cur.execute(
                 "INSERT INTO load_history (load_timestamp, status, metrics) VALUES (%s, %s, %s)",
-                (datetime.utcnow(), status, json.dumps(metrics))
+                (datetime.now(UTC), status, json.dumps(metrics))
             )
 
     def manage_transaction(self, action: Literal["begin", "commit", "rollback"]) -> None:

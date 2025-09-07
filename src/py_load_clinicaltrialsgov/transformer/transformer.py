@@ -2,7 +2,7 @@ import pandas as pd
 from typing import Dict, List, Tuple
 from py_load_clinicaltrialsgov.models.api_models import Study
 import json
-from datetime import datetime
+from datetime import datetime, UTC
 
 class Transformer:
     """
@@ -30,7 +30,7 @@ class Transformer:
         self.raw_studies.append({
             "nct_id": nct_id,
             "last_updated_api": study.protocol_section.status_module.get("lastUpdatePostDateStruct", {}).get("date") if study.protocol_section.status_module else None,
-            "ingestion_timestamp": datetime.utcnow(),
+            "ingestion_timestamp": datetime.now(UTC),
             "payload": study.model_dump_json(by_alias=True)
         })
 
