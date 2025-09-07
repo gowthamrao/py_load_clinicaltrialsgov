@@ -1,7 +1,16 @@
 import pandas as pd
 from typing import Dict, List, Any, Literal
 from datetime import datetime, UTC
-import psycopg
+
+try:
+    import psycopg
+except ImportError:
+    raise ImportError(
+        "PostgreSQL dependencies are not installed. "
+        "Please install the package with the 'postgres' extra: "
+        "pip install py-load-clinicaltrialsgov[postgres]"
+    )
+
 
 from py_load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
 from py_load_clinicaltrialsgov.config import settings
@@ -125,6 +134,15 @@ class PostgresConnector(DatabaseConnectorInterface):
             cur.execute("SELECT MAX(load_timestamp) FROM load_history WHERE status = 'SUCCESS'")
             result = cur.fetchone()
             return result[0] if result else None
+
+    def get_last_load_history(self) -> Dict[str, Any] | None:
+        """
+        Gets the most recent load history record.
+        """
+        with self.conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+            cur.execute("SELECT * FROM load_history ORDER BY load_timestamp DESC LIMIT 1")
+            result = cur.fetchone()
+            return result
 
     def record_load_history(self, status: str, metrics: Dict[str, Any]) -> None:
         """

@@ -26,10 +26,12 @@ An ETL package for loading data from the ClinicalTrials.gov V2 API into a relati
     ```
 
 2.  **Create a virtual environment and install dependencies:**
+    The package uses optional dependencies for different database backends.
+    To install with PostgreSQL support, run:
     ```bash
     uv venv
     source .venv/bin/activate
-    uv pip install -e .
+    uv pip install -e .[postgres]
     ```
 
 ## Configuration
@@ -49,12 +51,12 @@ You can also place these variables in a `.env` file in the project root.
 
 The package provides a command-line interface for operation.
 
-### Initialize the Database
+### Manage the Database Schema
 
-Before running the ETL for the first time, you need to initialize the database schema:
+Before running the ETL for the first time, you need to initialize the database schema by running migrations:
 
 ```bash
-py-load-clinicaltrialsgov init-db --connector postgres
+py-load-clinicaltrialsgov migrate-db
 ```
 
 ### Run the ETL
@@ -74,7 +76,7 @@ py-load-clinicaltrialsgov run --load-type full --connector postgres
 To check the status of the last ETL run, use the `status` command:
 
 ```bash
-py-load-clinicaltrialsgov run status --connector postgres
+py-load-clinicaltrialsgov status --connector postgres
 ```
 
 ## Development

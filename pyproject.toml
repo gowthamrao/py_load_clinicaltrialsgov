@@ -13,7 +13,6 @@ dependencies = [
     "typer[all]",
     "tenacity",
     "pandas",
-    "psycopg[binary]",
     "pyarrow",
     "pydantic-settings",
     "structlog",
@@ -22,6 +21,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+postgres = ["psycopg[binary]"]
 dev = [
     "ruff",
     "mypy",
