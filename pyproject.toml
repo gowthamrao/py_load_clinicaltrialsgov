@@ -1,0 +1,40 @@
+[project]
+name = "py-load-clinicaltrialsgov"
+version = "0.1.0"
+description = "An ETL package for loading data from ClinicalTrials.gov V2 API into a relational database."
+readme = "README.md"
+authors = [
+    { name = "Jules", email = "jules@example.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "httpx",
+    "pydantic",
+    "typer[all]",
+    "tenacity",
+    "pandas",
+    "psycopg[binary]",
+    "pyarrow",
+    "pydantic-settings"
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "mypy",
+    "pytest",
+    "pytest-cov",
+    "testcontainers",
+    "pre-commit"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 88
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
