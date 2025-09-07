@@ -22,16 +22,6 @@ class PostgresConnector(DatabaseConnectorInterface):
 
     def __init__(self):
         self.conn = psycopg.connect(settings.db.dsn)
-        # Define table metadata, including natural keys for merge logic
-        self.table_metadata = {
-            "raw_studies": {"pk": ["nct_id"]},
-            "studies": {"pk": ["nct_id"]},
-            # For child tables, the PK is the natural key, not the surrogate `id`
-            "sponsors": {"pk": ["nct_id", "name", "agency_class"]},
-            "conditions": {"pk": ["nct_id", "name"]},
-            "interventions": {"pk": ["nct_id", "intervention_type", "name"]},
-            "design_outcomes": {"pk": ["nct_id", "outcome_type", "measure"]},
-        }
 
     def initialize_schema(self) -> None:
         """
@@ -60,18 +50,13 @@ class PostgresConnector(DatabaseConnectorInterface):
             with cur.copy(f"COPY {staging_table_name} FROM STDIN WITH (FORMAT CSV)") as copy:
                 copy.write(csv_buffer.read())
 
-    def execute_merge(self, table_name: str) -> None:
+    def execute_merge(self, table_name: str, primary_keys: List[str]) -> None:
         """
-        Merges data from a staging table to a final table using a generic
-        and efficient INSERT ON CONFLICT (UPSERT) strategy.
-        This implementation is now generic for all tables.
+        Merges data from a staging table to a final table using an efficient
+        INSERT ON CONFLICT (UPSERT) for parent tables and a DELETE/INSERT
+        pattern for child tables.
         """
-        if table_name not in self.table_metadata:
-            return
-
         staging_table_name = f"staging_{table_name}"
-        # The conflict target is the natural primary key of the table.
-        conflict_keys = self.table_metadata[table_name]["pk"]
 
         with self.conn.cursor() as cur:
             # Get column names from the final table, excluding the serial `id`
@@ -86,39 +71,38 @@ class PostgresConnector(DatabaseConnectorInterface):
                 return
 
             col_names = ", ".join(f'"{c}"' for c in columns)
-            conflict_target = ", ".join(f'"{pk}"' for pk in conflict_keys)
 
-            # All columns that are not part of the natural key will be updated on conflict.
-            update_cols = ", ".join(
-                f'"{col}" = EXCLUDED."{col}"' for col in columns if col not in conflict_keys
-            )
+            # For parent tables (studies, raw_studies), use UPSERT logic.
+            # For child tables, use DELETE/INSERT.
+            # The caller (transformer) is responsible for knowing which tables are which.
+            # A simple heuristic is that parent tables have a single-column PK.
+            is_parent_table = len(primary_keys) == 1
 
-            # If all columns are part of the natural key, there's nothing to update.
-            on_conflict_action = "DO NOTHING" if not update_cols else f"DO UPDATE SET {update_cols}"
+            if is_parent_table:
+                conflict_target = ", ".join(f'"{pk}"' for pk in primary_keys)
+                update_cols = ", ".join(
+                    f'"{col}" = EXCLUDED."{col}"'
+                    for col in columns
+                    if col not in primary_keys
+                )
+                on_conflict_action = (
+                    "DO NOTHING" if not update_cols else f"DO UPDATE SET {update_cols}"
+                )
 
-            # First, for child tables, we must clear old records for the studies being updated.
-            # This is necessary because we are replacing the entire set of child records for a study.
-            if table_name not in ["studies", "raw_studies"]:
-                cur.execute(f"""
-                    DELETE FROM {table_name}
-                    WHERE nct_id IN (SELECT DISTINCT nct_id FROM {staging_table_name})
-                """)
-
-            # Now, insert all the new records from the staging table.
-            # Since we deleted the old ones, this is a simple insert.
-            # The previous logic was flawed. A true UPSERT is not what is needed for these
-            # child tables, as we want to replace the entire collection.
-            # The correct pattern for "replace-all-child-records" is DELETE then INSERT.
-            # The `ON CONFLICT` is for the parent `studies` table.
-
-            if table_name in ["studies", "raw_studies"]:
-                 merge_sql = f"""
+                merge_sql = f"""
                     INSERT INTO {table_name} ({col_names})
                     SELECT {col_names} FROM {staging_table_name}
                     ON CONFLICT ({conflict_target}) {on_conflict_action}
                 """
             else:
-                # For child tables, we've already deleted, so we just insert.
+                # For child tables, clear old records for the studies being updated.
+                # This is necessary to replace the entire set of child records for a study.
+                cur.execute(f"""
+                    DELETE FROM {table_name}
+                    WHERE nct_id IN (SELECT DISTINCT nct_id FROM {staging_table_name})
+                """)
+
+                # After deleting, perform a simple INSERT.
                 merge_sql = f"""
                     INSERT INTO {table_name} ({col_names})
                     SELECT {col_names} FROM {staging_table_name}

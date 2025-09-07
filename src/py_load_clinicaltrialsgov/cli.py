@@ -89,6 +89,16 @@ def run(
 
         log.info("finished_processing_studies", total_record_count=record_count)
 
+        # This metadata now lives in the orchestrator, not the connector.
+        table_metadata = {
+            "raw_studies": ["nct_id"],
+            "studies": ["nct_id"],
+            "sponsors": ["nct_id", "name", "agency_class"],
+            "conditions": ["nct_id", "name"],
+            "interventions": ["nct_id", "intervention_type", "name"],
+            "design_outcomes": ["nct_id", "outcome_type", "measure"],
+        }
+
         dataframes = transformer.get_dataframes()
         for table_name, df in dataframes.items():
             if not df.empty:
@@ -97,9 +107,14 @@ def run(
                     table_name=table_name,
                     record_count=len(df),
                 )
+                primary_keys = table_metadata.get(table_name)
+                if not primary_keys:
+                    log.error("no_primary_key_defined_for_table", table_name=table_name)
+                    # Optionally, raise an error or skip the table
+                    continue
+
                 connector.bulk_load_staging(table_name, df)
-                # The connector now handles its own primary key logic
-                connector.execute_merge(table_name)
+                connector.execute_merge(table_name, primary_keys)
 
         metrics = {"records_processed": record_count}
         connector.record_load_history("SUCCESS", metrics)

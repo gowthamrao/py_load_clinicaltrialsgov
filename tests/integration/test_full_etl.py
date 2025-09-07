@@ -36,11 +36,11 @@ def test_full_etl_flow(db_connector):
 
     # Load initial data
     db_connector.bulk_load_staging("studies", studies_df)
-    db_connector.execute_merge("studies")
+    db_connector.execute_merge("studies", primary_keys=["nct_id"])
     db_connector.bulk_load_staging("interventions", interventions_df)
-    db_connector.execute_merge("interventions")
+    db_connector.execute_merge("interventions", primary_keys=["nct_id", "intervention_type", "name"])
     db_connector.bulk_load_staging("design_outcomes", outcomes_df)
-    db_connector.execute_merge("design_outcomes")
+    db_connector.execute_merge("design_outcomes", primary_keys=["nct_id", "outcome_type", "measure"])
 
     # Verify initial load
     with db_connector.conn.cursor() as cur:
@@ -62,9 +62,9 @@ def test_full_etl_flow(db_connector):
 
     # Load updated data
     db_connector.bulk_load_staging("studies", updated_studies_df)
-    db_connector.execute_merge("studies")
+    db_connector.execute_merge("studies", primary_keys=["nct_id"])
     db_connector.bulk_load_staging("interventions", updated_interventions_df)
-    db_connector.execute_merge("interventions")
+    db_connector.execute_merge("interventions", primary_keys=["nct_id", "intervention_type", "name"])
 
     # Verify the update
     with db_connector.conn.cursor() as cur:
