@@ -38,14 +38,19 @@ class Transformer:
     def _transform_raw_studies(self, nct_id: str, study: Study):
         last_updated_str = None
         if study.protocol_section.status_module:
-            last_updated_str = study.protocol_section.status_module.get("lastUpdatePostDateStruct", {}).get("date")
+            last_updated_str = study.protocol_section.status_module.get(
+                "lastUpdatePostDateStruct", {}
+            ).get("date")
 
-        self.raw_studies.append({
-            "nct_id": nct_id,
-            "last_updated_api": self._normalize_date(last_updated_str),
-            "ingestion_timestamp": datetime.now(UTC),
-            "payload": study.model_dump_json(by_alias=True)
-        })
+        self.raw_studies.append(
+            {
+                "nct_id": nct_id,
+                "last_updated_api": self._normalize_date(last_updated_str),
+                "last_updated_api_str": last_updated_str,
+                "ingestion_timestamp": datetime.now(UTC),
+                "payload": study.model_dump_json(by_alias=True),
+            }
+        )
 
     def _transform_studies_table(self, nct_id: str, study: Study):
         start_date_str = None

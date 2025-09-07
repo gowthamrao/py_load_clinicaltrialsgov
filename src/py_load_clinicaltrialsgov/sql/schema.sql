@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS dead_letter_queue (
     nct_id VARCHAR(255),
     payload JSONB,
     error_message TEXT,
-    created_at TIMESTAMETZ DEFAULT now()
+    created_at TIMESTAMPTZ DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS load_history (
