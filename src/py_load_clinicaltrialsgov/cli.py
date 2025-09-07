@@ -80,6 +80,12 @@ def run(
                     error=str(e),
                     exc_info=True,
                 )
+                if nct_id:
+                    connector.record_failed_study(
+                        nct_id=nct_id,
+                        payload=study.model_dump(),
+                        error_message=str(e),
+                    )
 
         log.info("finished_processing_studies", total_record_count=record_count)
 

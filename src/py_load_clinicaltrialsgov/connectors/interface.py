@@ -71,3 +71,17 @@ class DatabaseConnectorInterface(ABC):
             action: The transaction action to perform.
         """
         raise NotImplementedError
+
+    @abstractmethod
+    def record_failed_study(
+        self, nct_id: str, payload: Dict[str, Any], error_message: str
+    ) -> None:
+        """
+        Log a study that failed validation/transformation to a dead-letter queue.
+
+        Args:
+            nct_id: The NCT ID of the failed study.
+            payload: The raw JSON payload of the study.
+            error_message: The error message from the validation/transformation failure.
+        """
+        raise NotImplementedError
