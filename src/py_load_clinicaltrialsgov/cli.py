@@ -98,11 +98,8 @@ def run(
                     record_count=len(df),
                 )
                 connector.bulk_load_staging(table_name, df)
-                if table_name in ["studies", "raw_studies"]:
-                    primary_keys = ["nct_id"]
-                else:
-                    primary_keys = ["nct_id", "name"]  # Simplified for others
-                connector.execute_merge(table_name, primary_keys)
+                # The connector now handles its own primary key logic
+                connector.execute_merge(table_name)
 
         metrics = {"records_processed": record_count}
         connector.record_load_history("SUCCESS", metrics)
