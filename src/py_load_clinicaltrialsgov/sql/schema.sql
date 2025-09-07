@@ -32,6 +32,14 @@ CREATE TABLE IF NOT EXISTS conditions (
     name TEXT
 );
 
+CREATE TABLE IF NOT EXISTS dead_letter_queue (
+    id SERIAL PRIMARY KEY,
+    nct_id VARCHAR(255),
+    payload JSONB,
+    error_message TEXT,
+    created_at TIMESTAMETZ DEFAULT now()
+);
+
 CREATE UNLOGGED TABLE IF NOT EXISTS staging_raw_studies (
     nct_id VARCHAR(255),
     last_updated_api TIMESTAMP,

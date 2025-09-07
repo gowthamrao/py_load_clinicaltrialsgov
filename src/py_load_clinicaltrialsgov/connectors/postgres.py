@@ -104,6 +104,22 @@ class PostgresConnector(DatabaseConnectorInterface):
                 (datetime.now(UTC), status, json.dumps(metrics))
             )
 
+    def record_failed_study(
+        self, nct_id: str, payload: Dict[str, Any], error_message: str
+    ) -> None:
+        """
+        Logs a study that failed validation/transformation to the dead-letter queue.
+        """
+        import json
+        with self.conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO dead_letter_queue (nct_id, payload, error_message)
+                VALUES (%s, %s, %s)
+                """,
+                (nct_id, json.dumps(payload), error_message),
+            )
+
     def manage_transaction(self, action: Literal["begin", "commit", "rollback"]) -> None:
         """
         Manages a database transaction.
