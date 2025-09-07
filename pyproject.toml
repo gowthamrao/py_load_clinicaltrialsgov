@@ -16,7 +16,9 @@ dependencies = [
     "psycopg[binary]",
     "pyarrow",
     "pydantic-settings",
-    "structlog"
+    "structlog",
+    "alembic",
+    "SQLAlchemy"
 ]
 
 [project.optional-dependencies]

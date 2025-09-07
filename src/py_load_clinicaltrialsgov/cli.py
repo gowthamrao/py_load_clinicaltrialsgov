@@ -116,17 +116,35 @@ def run(
         if 'api_client' in locals():
             api_client.close()
 
+from alembic.config import Config
+from alembic import command
+
 @app.command()
 def init_db(
     connector_name: Annotated[str, typer.Option(help="Name of the database connector to use.")] = "postgres",
 ):
     """
-    Initialize the database schema.
+    Initialize the database by creating all tables and stamping it with the latest migration.
+    This is useful for setting up a new database from scratch.
     """
     logger.info("initializing_database_schema", connector_name=connector_name)
-    connector = get_connector(connector_name)
-    connector.initialize_schema()
+
+    # Run the initial schema setup
+    migrate_db()
+
     logger.info("database_schema_initialized")
+
+
+@app.command()
+def migrate_db(
+    revision: Annotated[str, typer.Option(help="The revision to upgrade to.")] = "head"
+):
+    """Apply database migrations."""
+    logger.info("running_database_migrations", revision=revision)
+    alembic_cfg = Config("alembic.ini")
+    command.upgrade(alembic_cfg, revision)
+    logger.info("database_migrations_completed")
+
 
 @app.command()
 def status(

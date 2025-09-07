@@ -26,15 +26,10 @@ class PostgresConnector(DatabaseConnectorInterface):
 
     def initialize_schema(self) -> None:
         """
-        Initializes the database schema by executing the schema.sql file.
+        This method is now a no-op. Schema management is handled by Alembic.
+        Use the `migrate-db` CLI command to create or update the schema.
         """
-        import importlib.resources
-        from .. import sql
-
-        schema_sql = importlib.resources.read_text(sql, "schema.sql")
-        with self.conn.cursor() as cur:
-            cur.execute(schema_sql)
-        self.conn.commit()
+        pass
 
     def bulk_load_staging(self, table_name: str, data: pd.DataFrame) -> None:
         """
