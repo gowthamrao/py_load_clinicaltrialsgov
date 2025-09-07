@@ -119,20 +119,6 @@ def run(
 from alembic.config import Config
 from alembic import command
 
-@app.command()
-def init_db(
-    connector_name: Annotated[str, typer.Option(help="Name of the database connector to use.")] = "postgres",
-):
-    """
-    Initialize the database by creating all tables and stamping it with the latest migration.
-    This is useful for setting up a new database from scratch.
-    """
-    logger.info("initializing_database_schema", connector_name=connector_name)
-
-    # Run the initial schema setup
-    migrate_db()
-
-    logger.info("database_schema_initialized")
 
 
 @app.command()
@@ -146,6 +132,8 @@ def migrate_db(
     logger.info("database_migrations_completed")
 
 
+import json
+
 @app.command()
 def status(
     connector_name: Annotated[str, typer.Option(help="Name of the database connector to use.")] = "postgres",
@@ -153,17 +141,24 @@ def status(
     """
     Check the status of the last ETL run.
     """
-    connector = get_connector(connector_name)
-    with connector.conn.cursor() as cur:
-        cur.execute("SELECT load_timestamp, status, metrics FROM load_history ORDER BY load_timestamp DESC LIMIT 1")
-        result = cur.fetchone()
-        if result:
-            timestamp, status_val, metrics = result
-            print(f"Last run at: {timestamp}")
-            print(f"Status: {status_val}")
-            print(f"Metrics: {metrics}")
+    logger.info("checking_etl_status")
+    try:
+        connector = get_connector(connector_name)
+        history = connector.get_last_load_history()
+
+        if history:
+            typer.echo("Last ETL Run Status:")
+            typer.echo(f"  Timestamp: {history['load_timestamp'].isoformat()}")
+            typer.echo(f"  Status: {history['status']}")
+            typer.echo("  Metrics:")
+            # Pretty print the JSON metrics
+            typer.echo(json.dumps(history['metrics'], indent=4))
         else:
-            print("No load history found.")
+            typer.echo("No ETL run history found.")
+    except Exception as e:
+        logger.error("failed_to_get_status", error=str(e), exc_info=True)
+        typer.echo(f"Error: Could not retrieve status. {e}", err=True)
+        raise typer.Exit(code=1)
 
 if __name__ == "__main__":
     app()

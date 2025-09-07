@@ -72,3 +72,78 @@ def test_run_command_sends_failed_study_to_dlq(
         mock_connector.manage_transaction.assert_any_call("begin")
         mock_connector.manage_transaction.assert_any_call("commit")
         mock_connector.record_load_history.assert_any_call("SUCCESS", {"records_processed": 0})
+
+
+def test_status_command_success(mock_connector):
+    """
+    Verify the status command prints the latest load history successfully.
+    """
+    # Arrange
+    from datetime import datetime
+    import json
+    history_record = {
+        "load_timestamp": datetime(2023, 1, 1, 12, 0, 0),
+        "status": "SUCCESS",
+        "metrics": {"records_processed": 100}
+    }
+    mock_connector.get_last_load_history.return_value = history_record
+
+    with patch("py_load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector):
+        # Act
+        result = runner.invoke(app, ["status"])
+
+        # Assert
+        assert result.exit_code == 0
+        assert "Last ETL Run Status:" in result.stdout
+        assert f"Timestamp: {history_record['load_timestamp'].isoformat()}" in result.stdout
+        assert f"Status: {history_record['status']}" in result.stdout
+        assert json.dumps(history_record['metrics'], indent=4) in result.stdout
+
+
+def test_status_command_no_history(mock_connector):
+    """
+    Verify the status command handles the case where no history is found.
+    """
+    # Arrange
+    mock_connector.get_last_load_history.return_value = None
+
+    with patch("py_load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector):
+        # Act
+        result = runner.invoke(app, ["status"])
+
+        # Assert
+        assert result.exit_code == 0
+        assert "No ETL run history found." in result.stdout
+
+
+def test_status_command_failure(mock_connector):
+    """
+    Verify the status command handles exceptions gracefully.
+    """
+    # Arrange
+    error_message = "Database connection failed"
+    mock_connector.get_last_load_history.side_effect = Exception(error_message)
+
+    with patch("py_load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector):
+        # Act
+        result = runner.invoke(app, ["status"], catch_exceptions=False)
+
+        # Assert
+        assert result.exit_code == 1
+        # The error message is now in the exception info
+        assert isinstance(result.exception, SystemExit)
+
+
+@patch("py_load_clinicaltrialsgov.cli.command")
+def test_migrate_db_command(mock_alembic_command):
+    """
+    Verify the migrate-db command calls alembic correctly.
+    """
+    # Act
+    result = runner.invoke(app, ["migrate-db"])
+
+    # Assert
+    assert result.exit_code == 0
+    mock_alembic_command.upgrade.assert_called_once()
+    # Check that the second argument is 'head'
+    assert mock_alembic_command.upgrade.call_args[0][1] == "head"

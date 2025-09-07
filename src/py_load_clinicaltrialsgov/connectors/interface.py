@@ -51,6 +51,15 @@ class DatabaseConnectorInterface(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def get_last_load_history(self) -> Dict[str, Any] | None:
+        """
+        Retrieve the most recent entry from the load history.
+        Returns:
+            A dictionary representing the last load history record, or None.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def record_load_history(self, status: str, metrics: Dict[str, Any]) -> None:
         """
         Log the outcome of the ETL run in a history table.
