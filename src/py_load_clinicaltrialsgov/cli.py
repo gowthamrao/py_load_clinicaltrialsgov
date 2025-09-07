@@ -8,7 +8,7 @@ from py_load_clinicaltrialsgov.connectors.postgres import PostgresConnector
 from py_load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
 from py_load_clinicaltrialsgov.extractor.api_client import APIClient
 from py_load_clinicaltrialsgov.transformer.transformer import Transformer
-from py_load_clinicaltrialsgov.config import settings
+from py_load_clinicaltrialsgov.orchestrator import Orchestrator
 
 
 # Configure structlog for JSON output
@@ -37,99 +37,27 @@ def get_connector(name: str) -> DatabaseConnectorInterface:
     logger.error("unsupported_connector", connector_name=name)
     raise ValueError(f"Unsupported connector: {name}")
 
+
 @app.command()
 def run(
-    load_type: Annotated[str, typer.Option(help="Type of load: 'full' or 'delta'.")] = "delta",
-    connector_name: Annotated[str, typer.Option(help="Name of the database connector to use.")] = "postgres",
+    load_type: Annotated[
+        str, typer.Option(help="Type of load: 'full' or 'delta'.")
+    ] = "delta",
+    connector_name: Annotated[
+        str, typer.Option(help="Name of the database connector to use.")
+    ] = "postgres",
 ):
     """
     Run the ETL process.
     """
-    log = logger.bind(load_type=load_type, connector_name=connector_name)
-    log.info("etl_process_started")
-
     connector = get_connector(connector_name)
     api_client = APIClient()
     transformer = Transformer()
 
-    try:
-        connector.manage_transaction("begin")
-
-        updated_since = None
-        if load_type == "delta":
-            updated_since = connector.get_last_successful_load_timestamp()
-            if updated_since:
-                log.info("delta_load_initiated", updated_since=updated_since.isoformat())
-            else:
-                log.info("no_successful_load_found_performing_full_load")
-
-        studies_iterator = api_client.get_all_studies(updated_since=updated_since)
-
-        record_count = 0
-        for study in studies_iterator:
-            nct_id = study.protocol_section.identification_module.get("nctId")
-            try:
-                transformer.transform_study(study)
-                record_count += 1
-                if record_count % 100 == 0:
-                    log.info("processed_studies_batch", record_count=record_count)
-            except Exception as e:
-                log.error(
-                    "study_transformation_failed",
-                    nct_id=nct_id,
-                    error=str(e),
-                    exc_info=True,
-                )
-                if nct_id:
-                    connector.record_failed_study(
-                        nct_id=nct_id,
-                        payload=study.model_dump(),
-                        error_message=str(e),
-                    )
-
-        log.info("finished_processing_studies", total_record_count=record_count)
-
-        # This metadata now lives in the orchestrator, not the connector.
-        table_metadata = {
-            "raw_studies": ["nct_id"],
-            "studies": ["nct_id"],
-            "sponsors": ["nct_id", "name", "agency_class"],
-            "conditions": ["nct_id", "name"],
-            "interventions": ["nct_id", "intervention_type", "name"],
-            "design_outcomes": ["nct_id", "outcome_type", "measure"],
-        }
-
-        dataframes = transformer.get_dataframes()
-        for table_name, df in dataframes.items():
-            if not df.empty:
-                log.info(
-                    "loading_data_into_table",
-                    table_name=table_name,
-                    record_count=len(df),
-                )
-                primary_keys = table_metadata.get(table_name)
-                if not primary_keys:
-                    log.error("no_primary_key_defined_for_table", table_name=table_name)
-                    # Optionally, raise an error or skip the table
-                    continue
-
-                connector.bulk_load_staging(table_name, df)
-                connector.execute_merge(table_name, primary_keys)
-
-        metrics = {"records_processed": record_count}
-        connector.record_load_history("SUCCESS", metrics)
-        connector.manage_transaction("commit")
-        log.info("etl_process_completed_successfully", metrics=metrics)
-
-    except Exception as e:
-        log.error("etl_process_failed", error=str(e), exc_info=True)
-        if 'connector' in locals():
-            connector.manage_transaction("rollback")
-            metrics = {"error": str(e)}
-            connector.record_load_history("FAILURE", metrics)
-    finally:
-        if 'api_client' in locals():
-            api_client.close()
+    orchestrator = Orchestrator(
+        connector=connector, api_client=api_client, transformer=transformer
+    )
+    orchestrator.run_etl(load_type=load_type)
 
 from alembic.config import Config
 from alembic import command

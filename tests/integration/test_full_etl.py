@@ -5,18 +5,36 @@ from py_load_clinicaltrialsgov.connectors.postgres import PostgresConnector
 from py_load_clinicaltrialsgov.config import settings
 from datetime import datetime
 
+from alembic.config import Config
+from alembic import command
+
 @pytest.fixture(scope="module")
 def postgres_container():
-    with PostgresContainer("postgres:13") as container:
+    with PostgresContainer("postgres:latest", driver=None) as container:
         original_dsn = settings.db.dsn
-        settings.db.dsn = container.get_connection_url()
+
+        # The plain DSN for the application
+        app_dsn = container.get_connection_url()
+        # The DSN with the correct dialect for Alembic/SQLAlchemy
+        alembic_dsn = app_dsn.replace("postgresql://", "postgresql+psycopg://")
+
+        # Set DSN for Alembic and run migrations
+        settings.db.dsn = alembic_dsn
+        alembic_cfg = Config("alembic.ini")
+        command.upgrade(alembic_cfg, "head")
+
+        # Set DSN for the application to use
+        settings.db.dsn = app_dsn
         yield container
+
+        # Restore original DSN after tests
         settings.db.dsn = original_dsn
+
 
 @pytest.fixture(scope="module")
 def db_connector(postgres_container):
+    # The DSN is already set correctly by the postgres_container fixture
     connector = PostgresConnector()
-    connector.initialize_schema()
     return connector
 
 def test_full_etl_flow(db_connector):
@@ -25,7 +43,20 @@ def test_full_etl_flow(db_connector):
     including the "delete then insert" logic for child tables.
     """
     # 1. Initial Load
-    studies_df = pd.DataFrame([{"nct_id": "NCT00000123", "brief_title": "Initial Title", "study_type": "Observational"}])
+    studies_columns = [
+        "nct_id", "brief_title", "official_title", "overall_status", "start_date",
+        "start_date_str", "primary_completion_date", "primary_completion_date_str",
+        "study_type", "brief_summary"
+    ]
+    studies_df = pd.DataFrame(
+        [
+            (
+                "NCT00000123", "Initial Title", None, "COMPLETED", None,
+                None, None, None, "Observational", None
+            )
+        ],
+        columns=studies_columns
+    )
     interventions_df = pd.DataFrame([
         {"nct_id": "NCT00000123", "intervention_type": "DRUG", "name": "Aspirin", "description": "Low dose aspirin"},
         {"nct_id": "NCT00000123", "intervention_type": "DRUG", "name": "Placebo", "description": "Sugar pill"}
@@ -55,7 +86,15 @@ def test_full_etl_flow(db_connector):
 
     # 2. Second Load (Delta update for the same study)
     # The title is updated, and the interventions have changed completely.
-    updated_studies_df = pd.DataFrame([{"nct_id": "NCT00000123", "brief_title": "Updated Title", "study_type": "Observational"}])
+    updated_studies_df = pd.DataFrame(
+        [
+            (
+                "NCT00000123", "Updated Title", None, "COMPLETED", None,
+                None, None, None, "Observational", None
+            )
+        ],
+        columns=studies_columns
+    )
     updated_interventions_df = pd.DataFrame([
         {"nct_id": "NCT00000123", "intervention_type": "DEVICE", "name": "Stent", "description": "A new device"}
     ])
