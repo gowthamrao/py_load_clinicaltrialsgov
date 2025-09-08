@@ -174,14 +174,18 @@ class Transformer:
             return None
         try:
             # First, try to parse as a full date
-            return datetime.strptime(date_str, '%Y-%m-%d')
+            return datetime.strptime(date_str, "%Y-%m-%d")
         except ValueError:
             try:
-                # If that fails, try to parse as 'YYYY-MM'
-                return datetime.strptime(date_str, '%Y-%m')
+                # If that fails, try to parse as 'Month YYYY' (e.g., "January 2023")
+                return datetime.strptime(date_str, "%B %Y")
             except ValueError:
-                # Add more formats here if needed
-                return None
+                try:
+                    # If that fails, try to parse as 'YYYY-MM'
+                    return datetime.strptime(date_str, "%Y-%m")
+                except ValueError:
+                    # Add more formats here if needed
+                    return None
 
     def get_dataframes(self) -> Dict[str, pd.DataFrame]:
         """

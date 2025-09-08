@@ -1,4 +1,5 @@
 import structlog
+import time
 from typing import Dict, List, Any, Literal
 
 from py_load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
@@ -36,6 +37,7 @@ class Orchestrator:
         """
         Executes the full ETL pipeline.
         """
+        start_time = time.time()
         log = logger.bind(load_type=load_type)
         log.info("etl_process_started")
 
@@ -85,13 +87,16 @@ class Orchestrator:
 
             log.info("finished_processing_studies", total_record_count=record_count)
 
+            table_metrics = {}
             dataframes = self.transformer.get_dataframes()
             for table_name, df in dataframes.items():
                 if not df.empty:
+                    record_count_table = len(df)
+                    table_metrics[table_name] = record_count_table
                     log.info(
                         "loading_data_into_table",
                         table_name=table_name,
-                        record_count=len(df),
+                        record_count=record_count_table,
                     )
                     primary_keys = self.TABLE_METADATA.get(table_name)
                     if not primary_keys:
@@ -111,7 +116,16 @@ class Orchestrator:
 
                     self.connector.execute_merge(table_name, primary_keys, strategy)
 
-            metrics: Dict[str, Any] = {"records_processed": record_count}
+            duration = time.time() - start_time
+            metrics: Dict[str, Any] = {
+                "duration_seconds": round(duration, 2),
+                "records_processed": record_count,
+                "throughput_records_per_sec": (
+                    round(record_count / duration, 2) if duration > 0 else 0
+                ),
+                "records_loaded_per_table": table_metrics,
+            }
+
             self.connector.record_load_history("SUCCESS", metrics)
             self.connector.manage_transaction("commit")
             log.info("etl_process_completed_successfully", metrics=metrics)
@@ -119,7 +133,8 @@ class Orchestrator:
         except Exception as e:
             log.error("etl_process_failed", error=str(e), exc_info=True)
             self.connector.manage_transaction("rollback")
-            metrics = {"error": str(e)}
+            duration = time.time() - start_time
+            metrics = {"error": str(e), "duration_seconds": round(duration, 2)}
             self.connector.record_load_history("FAILURE", metrics)
         finally:
             self.api_client.close()
