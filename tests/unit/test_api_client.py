@@ -1,83 +1,144 @@
 import httpx
 import pytest
 from datetime import datetime
+from typing import List, Tuple, Any
+from unittest.mock import MagicMock
+
+from tenacity import RetryError
+
 from py_load_clinicaltrialsgov.extractor.api_client import APIClient
+from py_load_clinicaltrialsgov.config import settings
+
+from httpx import MockTransport, Response
 
 
-from httpx import MockTransport
-
-
-@pytest.fixture()
+@pytest.fixture
 def mock_transport() -> MockTransport:
-    def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx.Request) -> Response:
         if "pageToken=next" in str(request.url):
-            return httpx.Response(
+            return Response(
                 200,
                 json={
-                    "studies": [
-                        {
-                            "protocolSection": {
-                                "identificationModule": {"nctId": "NCT00000002"}
-                            },
-                            "derivedSection": {},
-                            "hasResults": False,
-                        }
-                    ],
+                    "studies": [{"protocolSection": {"identificationModule": {"nctId": "NCT00000002"}}, "derivedSection": {}, "hasResults": False}],
                     "nextPageToken": None,
                 },
             )
-
         if "filter.advanced" in str(request.url):
-            return httpx.Response(
+            return Response(
                 200,
                 json={
-                    "studies": [
-                        {
-                            "protocolSection": {
-                                "identificationModule": {"nctId": "NCT00000003"}
-                            },
-                            "derivedSection": {},
-                            "hasResults": False,
-                        }
-                    ],
+                    "studies": [{"protocolSection": {"identificationModule": {"nctId": "NCT00000003"}}, "derivedSection": {}, "hasResults": False}],
                     "nextPageToken": None,
                 },
             )
-
-        return httpx.Response(
+        return Response(
             200,
             json={
-                "studies": [
-                    {
-                        "protocolSection": {
-                            "identificationModule": {"nctId": "NCT00000001"}
-                        },
-                        "derivedSection": {},
-                        "hasResults": False,
-                    }
-                ],
+                "studies": [{"protocolSection": {"identificationModule": {"nctId": "NCT00000001"}}, "derivedSection": {}, "hasResults": False}],
                 "nextPageToken": "next",
             },
         )
 
-    return httpx.MockTransport(handler)
+    return MockTransport(handler)
+
+
+class MockStatefulTransport(MockTransport):
+    def __init__(self, responses: List[Tuple[int, dict[str, Any]] | Exception]):
+        self.responses = responses
+        self.call_count = 0
+        super().__init__(self.handler)
+
+    def handler(self, request: httpx.Request) -> Response:
+        response = self.responses[self.call_count]
+        self.call_count += 1
+        if isinstance(response, Exception):
+            raise response
+        status_code, json_data = response
+        return Response(status_code=status_code, json=json_data)
 
 
 def test_get_all_studies_pagination(mock_transport: MockTransport) -> None:
     client = APIClient()
     client.client = httpx.Client(transport=mock_transport)
-
     studies = list(client.get_all_studies())
-
     assert len(studies) == 2
 
 
 def test_get_all_studies_delta_load(mock_transport: MockTransport) -> None:
     client = APIClient()
     client.client = httpx.Client(transport=mock_transport)
-
     studies = list(client.get_all_studies(updated_since=datetime(2023, 1, 1)))
-
     assert len(studies) == 1
     assert studies[0].protocol_section.identification_module
     assert studies[0].protocol_section.identification_module["nctId"] == "NCT00000003"
+
+
+@pytest.mark.parametrize(
+    "retryable_status_code",
+    [
+        429,  # Too Many Requests
+        500,  # Internal Server Error
+        503,  # Service Unavailable
+    ],
+)
+def test_fetch_page_retries_on_retryable_errors(retryable_status_code: int) -> None:
+    # Arrange
+    responses = [
+        (retryable_status_code, {"error": "transient error"}),
+        (200, {"studies": [], "nextPageToken": None}),
+    ]
+    transport = MockStatefulTransport(responses)
+    client = APIClient()
+    client.client = httpx.Client(transport=transport)
+
+    # Act
+    client._fetch_page(params={})
+
+    # Assert
+    assert transport.call_count == 2
+
+
+def test_fetch_page_retries_on_timeout() -> None:
+    # Arrange
+    responses = [
+        httpx.TimeoutException("timeout"),
+        (200, {"studies": [], "nextPageToken": None}),
+    ]
+    transport = MockStatefulTransport(responses)
+    client = APIClient()
+    client.client = httpx.Client(transport=transport)
+
+    # Act
+    client._fetch_page(params={})
+
+    # Assert
+    assert transport.call_count == 2
+
+
+@pytest.mark.parametrize(
+    "non_retryable_status_code",
+    [
+        400,  # Bad Request
+        401,  # Unauthorized
+        404,  # Not Found
+    ],
+)
+def test_fetch_page_does_not_retry_on_non_retryable_errors(
+    non_retryable_status_code: int,
+) -> None:
+    # Arrange
+    # Set retries to 1 to ensure the test fails fast if retry logic is wrong
+    settings.api.max_retries = 1
+    responses = [(non_retryable_status_code, {"error": "client error"})]
+    transport = MockStatefulTransport(responses)
+    client = APIClient()
+    client.client = httpx.Client(transport=transport)
+
+    # Act & Assert
+    with pytest.raises(httpx.HTTPStatusError) as excinfo:
+        client._fetch_page(params={})
+
+    # Check that the raised exception has the expected status code
+    assert excinfo.value.response.status_code == non_retryable_status_code
+    # Crucially, assert that the request was only made once
+    assert transport.call_count == 1
