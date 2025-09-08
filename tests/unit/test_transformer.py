@@ -37,7 +37,7 @@ class TestTransformer(unittest.TestCase):
         study = Study.model_validate(mock_study_data)
 
         transformer = Transformer()
-        transformer.transform_study(study)
+        transformer.transform_study(study, mock_study_data)
         dataframes = transformer.get_dataframes()
 
         # Assertions for raw_studies

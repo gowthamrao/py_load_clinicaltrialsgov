@@ -69,8 +69,8 @@ def test_get_all_studies_delta_load(mock_transport: MockTransport) -> None:
     client.client = httpx.Client(transport=mock_transport)
     studies = list(client.get_all_studies(updated_since=datetime(2023, 1, 1)))
     assert len(studies) == 1
-    assert studies[0].protocol_section.identification_module
-    assert studies[0].protocol_section.identification_module["nctId"] == "NCT00000003"
+    assert "protocolSection" in studies[0]
+    assert studies[0]["protocolSection"]["identificationModule"]["nctId"] == "NCT00000003"
 
 
 @pytest.mark.parametrize(

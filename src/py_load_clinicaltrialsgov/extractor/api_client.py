@@ -4,7 +4,6 @@ from typing import Iterator, Dict, Any, Optional
 from datetime import datetime
 
 from py_load_clinicaltrialsgov.config import settings
-from py_load_clinicaltrialsgov.models.api_models import APIResponse, Study
 
 BASE_URL = "https://clinicaltrials.gov/api/v2/studies"
 
@@ -39,19 +38,19 @@ class APIClient:
         wait=wait_exponential(multiplier=1, min=1, max=10),
         retry=retry_if_exception(_is_retryable_exception),
     )
-    def _fetch_page(self, params: Dict[str, Any]) -> APIResponse:
+    def _fetch_page(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Fetches a single page of studies from the API.
+        Fetches a single page of studies from the API as a raw dictionary.
         """
         response = self.client.get(BASE_URL, params=params)
         response.raise_for_status()
-        return APIResponse.model_validate(response.json())
+        return response.json()
 
     def get_all_studies(
         self, updated_since: Optional[datetime] = None
-    ) -> Iterator[Study]:
+    ) -> Iterator[Dict[str, Any]]:
         """
-        Fetches all studies from the API, handling pagination.
+        Fetches all studies from the API, yielding raw study dictionaries.
 
         Args:
             updated_since: If provided, only fetch studies updated since this timestamp.
@@ -69,10 +68,10 @@ class APIClient:
 
             api_response = self._fetch_page(params)
 
-            for study in api_response.studies:
-                yield study
+            for study_dict in api_response.get("studies", []):
+                yield study_dict
 
-            page_token = api_response.next_page_token
+            page_token = api_response.get("nextPageToken")
             if not page_token:
                 break
 

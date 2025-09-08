@@ -29,29 +29,22 @@ def mock_transformer() -> MagicMock:
     return MagicMock()
 
 
-def test_run_command_sends_failed_study_to_dlq(
+def test_run_command_sends_invalid_study_to_dlq(
     mock_connector: MagicMock,
     mock_api_client: MagicMock,
-    mock_transformer: MagicMock,
 ) -> None:
     """
-    Verify that when study transformation fails, the raw study data is sent
-    to the dead-letter queue via the connector.
+    Verify that when a study fails Pydantic validation, the raw study data is
+    sent to the dead-letter queue and the ETL continues.
     """
     # Arrange
-    # A dummy study that will be "returned" by the API client
-    failed_study_payload = {
-        "protocolSection": {"identificationModule": {"nctId": "NCT12345678"}},
-        "derivedSection": {},
-        "hasResults": False,
-    }
-    failed_study = Study.model_validate(failed_study_payload)
-    nct_id = "NCT12345678"
-    error_message = "Something went horribly wrong"
+    # This payload is invalid because it's missing the 'identificationModule'
+    invalid_study_payload = {"protocolSection": {"statusModule": {}}}
 
     # Configure mocks
-    mock_api_client.get_all_studies.return_value = iter([failed_study])
-    mock_transformer.transform_study.side_effect = Exception(error_message)
+    mock_api_client.get_all_studies.return_value = iter([invalid_study_payload])
+    # No need to mock the transformer, as it won't be called for this record.
+    mock_transformer = MagicMock()
 
     with (
         patch(
@@ -68,22 +61,25 @@ def test_run_command_sends_failed_study_to_dlq(
         # Assert
         assert (
             result.exit_code == 0
-        )  # The overall process should not fail on a single record
+        ), "The overall process should not fail on a single validation error"
 
         # Verify the DLQ method was called correctly
         mock_connector.record_failed_study.assert_called_once()
         call_args, call_kwargs = mock_connector.record_failed_study.call_args
 
-        assert call_kwargs.get("nct_id") == nct_id
-        assert call_kwargs.get("payload") == failed_study.model_dump()
-        assert call_kwargs.get("error_message") == error_message
+        # NCT ID is None because it couldn't be parsed from the invalid payload
+        assert call_kwargs.get("nct_id") is None
+        assert call_kwargs.get("payload") == invalid_study_payload
+        assert "Pydantic Validation Error" in call_kwargs.get("error_message")
+
+        # Verify the transformer was never called
+        mock_transformer.transform_study.assert_not_called()
 
         # Verify transaction was still committed
         mock_connector.manage_transaction.assert_any_call("begin")
         mock_connector.manage_transaction.assert_any_call("commit")
 
-        # Verify that record_load_history was called with SUCCESS and metrics
-        # that include records_processed: 0, without being brittle.
+        # Verify that record_load_history was called with SUCCESS and 0 records processed
         rh_call_args, rh_call_kwargs = mock_connector.record_load_history.call_args
         assert rh_call_args[0] == "SUCCESS"
         assert isinstance(rh_call_args[1], dict)
