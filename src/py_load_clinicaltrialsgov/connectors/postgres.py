@@ -31,6 +31,26 @@ class PostgresConnector(DatabaseConnectorInterface):
         """
         pass
 
+    def truncate_all_tables(self) -> None:
+        """
+        Truncates all data tables in the schema.
+        """
+        tables_to_truncate = [
+            "raw_studies",
+            "studies",
+            "sponsors",
+            "conditions",
+            "interventions",
+            "design_outcomes",
+        ]
+        with self.conn.cursor() as cur:
+            # TRUNCATE is a DDL command and runs in its own transaction.
+            # We use RESTART IDENTITY to reset any auto-incrementing counters.
+            # We use CASCADE to drop dependent objects, though none are expected.
+            cur.execute(
+                f"TRUNCATE TABLE {', '.join(tables_to_truncate)} RESTART IDENTITY CASCADE"
+            )
+
     def bulk_load_staging(self, table_name: str, data: pd.DataFrame) -> None:
         """
         Bulk loads a DataFrame into a staging table using the COPY protocol.
@@ -53,17 +73,20 @@ class PostgresConnector(DatabaseConnectorInterface):
             ) as copy:
                 copy.write(csv_buffer.read())
 
-    def execute_merge(
-        self,
-        table_name: str,
-        primary_keys: List[str],
-        strategy: Literal["upsert", "delete_insert"],
-    ) -> None:
+    def execute_merge(self, table_name: str, primary_keys: List[str]) -> None:
         """
-        Merges data from a staging table to a final table using either a pure
-        UPSERT strategy or a DELETE/INSERT strategy.
+        Merges data from a staging table to a final table.
+        It internally decides the merge strategy.
+        - 'upsert' for parent tables ('studies', 'raw_studies').
+        - 'delete_insert' for child tables.
         """
         staging_table_name = f"staging_{table_name}"
+
+        # Determine strategy based on table name
+        if table_name in ["studies", "raw_studies"]:
+            strategy = "upsert"
+        else:
+            strategy = "delete_insert"
 
         with self.conn.cursor() as cur:
             cur.execute(
@@ -85,7 +108,6 @@ class PostgresConnector(DatabaseConnectorInterface):
                 if not update_cols:
                     on_conflict_action = "DO NOTHING"
                 else:
-                    # Create the "col" = EXCLUDED."col" part for each column
                     update_assignments = [
                         f'"{col}" = EXCLUDED."{col}"' for col in update_cols
                     ]
@@ -108,8 +130,6 @@ class PostgresConnector(DatabaseConnectorInterface):
                     INSERT INTO {table_name} ({col_names})
                     SELECT {col_names} FROM {staging_table_name};
                 """
-            else:
-                raise ValueError(f"Unknown merge strategy: {strategy}")
 
             cur.execute(merge_sql)
 

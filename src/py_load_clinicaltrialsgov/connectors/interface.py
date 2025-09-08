@@ -19,6 +19,11 @@ class DatabaseConnectorInterface(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def truncate_all_tables(self) -> None:
+        """Truncate all main data tables."""
+        raise NotImplementedError
+
+    @abstractmethod
     def get_last_successful_load_history(self) -> Dict[str, Any] | None:
         """
         Retrieve the most recent successful entry from the load history.
@@ -41,12 +46,7 @@ class DatabaseConnectorInterface(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def execute_merge(
-        self,
-        table_name: str,
-        primary_keys: List[str],
-        strategy: Literal["upsert", "delete_insert"],
-    ) -> None:
+    def execute_merge(self, table_name: str, primary_keys: List[str]) -> None:
         """
         Perform an UPSERT/MERGE from a staging table to the final table.
 
@@ -54,8 +54,6 @@ class DatabaseConnectorInterface(ABC):
             table_name: The name of the final target table.
             primary_keys: A list of column names that form the natural
                           primary key for the merge operation.
-            strategy: The merge strategy to use ('upsert' for parent tables,
-                      'delete_insert' for child tables).
         """
         raise NotImplementedError
 

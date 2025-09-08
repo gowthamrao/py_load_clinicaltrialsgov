@@ -42,10 +42,12 @@ class Orchestrator:
         log.info("etl_process_started")
 
         try:
-            self.connector.manage_transaction("begin")
-
+            # Handle load type specific setup before starting the transaction
             updated_since = None
-            if load_type == "delta":
+            if load_type == "full":
+                log.info("full_load_initiated_truncating_tables")
+                self.connector.truncate_all_tables()
+            elif load_type == "delta":
                 updated_since = self.connector.get_last_successful_load_timestamp()
                 if updated_since:
                     log.info(
@@ -54,6 +56,9 @@ class Orchestrator:
                     )
                 else:
                     log.info("no_successful_load_found_performing_full_load")
+
+            # Start the main transaction for the ETL run
+            self.connector.manage_transaction("begin")
 
             studies_iterator = self.api_client.get_all_studies(
                 updated_since=updated_since
@@ -106,15 +111,7 @@ class Orchestrator:
                         continue
 
                     self.connector.bulk_load_staging(table_name, df)
-
-                    # Parent tables use 'upsert', child tables use 'delete_insert'
-                    # to ensure the full set of child records is replaced.
-                    is_parent_table = primary_keys == ["nct_id"]
-                    strategy: Literal["upsert", "delete_insert"] = (
-                        "upsert" if is_parent_table else "delete_insert"
-                    )
-
-                    self.connector.execute_merge(table_name, primary_keys, strategy)
+                    self.connector.execute_merge(table_name, primary_keys)
 
             duration = time.time() - start_time
             metrics: Dict[str, Any] = {
