@@ -57,5 +57,33 @@ class TestTransformer(unittest.TestCase):
         # Assertions for conditions
         self.assertEqual(len(dataframes["conditions"]), 2)
 
+    def test_normalize_date(self):
+        from datetime import datetime
+        transformer = Transformer()
+
+        # Test valid full date
+        self.assertEqual(
+            transformer._normalize_date("2023-05-15"),
+            datetime(2023, 5, 15)
+        )
+
+        # Test valid month-year date
+        self.assertEqual(
+            transformer._normalize_date("2023-07"),
+            datetime(2023, 7, 1)
+        )
+
+        # Test valid long month-year date
+        self.assertEqual(
+            transformer._normalize_date("February 2024"),
+            datetime(2024, 2, 1)
+        )
+
+        # Test invalid date string
+        self.assertIsNone(transformer._normalize_date("invalid-date"))
+
+        # Test None input
+        self.assertIsNone(transformer._normalize_date(None))
+
 if __name__ == '__main__':
     unittest.main()
