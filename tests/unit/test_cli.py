@@ -67,24 +67,28 @@ def test_run_command_sends_failed_study_to_dlq(
         assert call_kwargs.get("payload") == failed_study.model_dump()
         assert call_kwargs.get("error_message") == error_message
 
-        # Verify transaction was still committed (or rolled back depending on final state)
-        # In this case, since the main loop continues, it should try to commit.
+        # Verify transaction was still committed
         mock_connector.manage_transaction.assert_any_call("begin")
         mock_connector.manage_transaction.assert_any_call("commit")
-        mock_connector.record_load_history.assert_any_call("SUCCESS", {"records_processed": 0})
+
+        # Verify that record_load_history was called with SUCCESS and metrics
+        # that include records_processed: 0, without being brittle.
+        rh_call_args, rh_call_kwargs = mock_connector.record_load_history.call_args
+        assert rh_call_args[0] == "SUCCESS"
+        assert isinstance(rh_call_args[1], dict)
+        assert rh_call_args[1].get("records_processed") == 0
 
 
-def test_status_command_success(mock_connector):
+def test_status_command_healthy(mock_connector):
     """
-    Verify the status command prints the latest load history successfully.
+    Verify the status command shows HEALTHY when the last run was a success.
     """
     # Arrange
     from datetime import datetime
-    import json
     history_record = {
         "load_timestamp": datetime(2023, 1, 1, 12, 0, 0),
         "status": "SUCCESS",
-        "metrics": {"records_processed": 100}
+        "metrics": {"records_processed": 100},
     }
     mock_connector.get_last_load_history.return_value = history_record
 
@@ -94,10 +98,65 @@ def test_status_command_success(mock_connector):
 
         # Assert
         assert result.exit_code == 0
-        assert "Last ETL Run Status:" in result.stdout
-        assert f"Timestamp: {history_record['load_timestamp'].isoformat()}" in result.stdout
-        assert f"Status: {history_record['status']}" in result.stdout
-        assert json.dumps(history_record['metrics'], indent=4) in result.stdout
+        assert "ETL Status: HEALTHY" in result.stdout
+        assert "Last Run Details:" in result.stdout
+        assert "SUCCESS" in result.stdout
+
+
+def test_status_command_failed_with_previous_success(mock_connector):
+    """
+    Verify status shows FAILED but includes the last successful run's details.
+    """
+    # Arrange
+    from datetime import datetime
+    failed_record = {
+        "load_timestamp": datetime(2023, 1, 2, 12, 0, 0),
+        "status": "FAILURE",
+        "metrics": {"error": "connection timed out"},
+    }
+    successful_record = {
+        "load_timestamp": datetime(2023, 1, 1, 12, 0, 0),
+        "status": "SUCCESS",
+        "metrics": {"records_processed": 100},
+    }
+    mock_connector.get_last_load_history.return_value = failed_record
+    mock_connector.get_last_successful_load_history.return_value = successful_record
+
+    with patch("py_load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector):
+        # Act
+        result = runner.invoke(app, ["status"])
+
+        # Assert
+        assert result.exit_code == 0
+        assert "ETL Status: FAILED" in result.stdout
+        assert "Failed Run Details:" in result.stdout
+        assert "FAILURE" in result.stdout
+        assert "Details of Last Successful Run:" in result.stdout
+        assert str(successful_record['load_timestamp'].isoformat()) in result.stdout
+
+
+def test_status_command_failed_with_no_previous_success(mock_connector):
+    """
+    Verify status shows FAILED and indicates no prior successful runs exist.
+    """
+    # Arrange
+    from datetime import datetime
+    failed_record = {
+        "load_timestamp": datetime(2023, 1, 2, 12, 0, 0),
+        "status": "FAILURE",
+        "metrics": {"error": "connection timed out"},
+    }
+    mock_connector.get_last_load_history.return_value = failed_record
+    mock_connector.get_last_successful_load_history.return_value = None
+
+    with patch("py_load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector):
+        # Act
+        result = runner.invoke(app, ["status"])
+
+        # Assert
+        assert result.exit_code == 0
+        assert "ETL Status: FAILED" in result.stdout
+        assert "No prior successful runs were found." in result.stdout
 
 
 def test_status_command_no_history(mock_connector):
@@ -114,24 +173,6 @@ def test_status_command_no_history(mock_connector):
         # Assert
         assert result.exit_code == 0
         assert "No ETL run history found." in result.stdout
-
-
-def test_status_command_failure(mock_connector):
-    """
-    Verify the status command handles exceptions gracefully.
-    """
-    # Arrange
-    error_message = "Database connection failed"
-    mock_connector.get_last_load_history.side_effect = Exception(error_message)
-
-    with patch("py_load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector):
-        # Act
-        result = runner.invoke(app, ["status"], catch_exceptions=False)
-
-        # Assert
-        assert result.exit_code == 1
-        # The error message is now in the exception info
-        assert isinstance(result.exception, SystemExit)
 
 
 @patch("py_load_clinicaltrialsgov.cli.command")

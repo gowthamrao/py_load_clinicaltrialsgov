@@ -19,6 +19,17 @@ class DatabaseConnectorInterface(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def get_last_successful_load_history(self) -> Dict[str, Any] | None:
+        """
+        Retrieve the most recent successful entry from the load history.
+
+        Returns:
+            A dictionary representing the last successful load history record,
+            or None if no successful loads have occurred.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def bulk_load_staging(self, table_name: str, data: pd.DataFrame) -> None:
         """
         Efficiently load standardized data into a staging table.

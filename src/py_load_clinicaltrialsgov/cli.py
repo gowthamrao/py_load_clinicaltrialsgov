@@ -110,6 +110,18 @@ def migrate_db(
     logger.info("database_migrations_completed")
 
 
+def _print_history(title: str, history: dict) -> None:
+    """Helper function to pretty-print load history."""
+    status_color = typer.colors.GREEN if history["status"] == "SUCCESS" else typer.colors.RED
+    status_styled = typer.style(history["status"], fg=status_color, bold=True)
+
+    typer.echo(typer.style(title, bold=True))
+    typer.echo(f"  Timestamp: {history['load_timestamp'].isoformat()}")
+    typer.echo(f"  Status: {status_styled}")
+    typer.echo("  Metrics:")
+    typer.echo(json.dumps(history["metrics"], indent=4))
+
+
 @app.command()
 def status(
     connector_name: Annotated[
@@ -117,22 +129,45 @@ def status(
     ] = "postgres",
 ) -> None:
     """
-    Check the status of the last ETL run.
+    Check the status and history of the ETL process.
     """
     logger.info("checking_etl_status")
     try:
         connector = get_connector(connector_name)
-        history = connector.get_last_load_history()
+        last_history = connector.get_last_load_history()
 
-        if history:
-            typer.echo("Last ETL Run Status:")
-            typer.echo(f"  Timestamp: {history['load_timestamp'].isoformat()}")
-            typer.echo(f"  Status: {history['status']}")
-            typer.echo("  Metrics:")
-            # Pretty print the JSON metrics
-            typer.echo(json.dumps(history['metrics'], indent=4))
-        else:
+        if not last_history:
             typer.echo("No ETL run history found.")
+            return
+
+        # The most recent run failed
+        if last_history["status"] == "FAILURE":
+            header = typer.style("ETL Status: FAILED", fg=typer.colors.RED, bold=True)
+            typer.echo(header)
+            typer.echo(
+                "The most recent ETL run failed. Details of the failure are below."
+            )
+            _print_history("Failed Run Details:", last_history)
+
+            successful_history = connector.get_last_successful_load_history()
+            if successful_history:
+                typer.echo("-" * 20)
+                typer.echo("However, a previously successful run was found.")
+                _print_history(
+                    "Details of Last Successful Run:", successful_history
+                )
+            else:
+                typer.echo("No prior successful runs were found.")
+
+        # The most recent run succeeded
+        else:
+            header = typer.style(
+                "ETL Status: HEALTHY", fg=typer.colors.GREEN, bold=True
+            )
+            typer.echo(header)
+            typer.echo("The most recent ETL run completed successfully.")
+            _print_history("Last Run Details:", last_history)
+
     except Exception as e:
         logger.error("failed_to_get_status", error=str(e), exc_info=True)
         typer.echo(f"Error: Could not retrieve status. {e}", err=True)
