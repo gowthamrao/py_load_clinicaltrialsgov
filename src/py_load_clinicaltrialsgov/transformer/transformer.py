@@ -99,17 +99,30 @@ class Transformer:
         )
 
     def _transform_sponsors(self, nct_id: str, study: Study) -> None:
-        if study.protocol_section.sponsor_collaborators_module:
-            lead_sponsor = study.protocol_section.sponsor_collaborators_module.get(
-                "leadSponsor"
+        module = study.protocol_section.sponsor_collaborators_module
+        if not module:
+            return
+
+        # Process the lead sponsor
+        if module.lead_sponsor:
+            self.sponsors.append(
+                {
+                    "nct_id": nct_id,
+                    "agency_class": module.lead_sponsor.class_details,
+                    "name": module.lead_sponsor.name,
+                    "is_lead": True,
+                }
             )
-            if lead_sponsor:
+
+        # Process the collaborators
+        if module.collaborators:
+            for collaborator in module.collaborators:
                 self.sponsors.append(
                     {
                         "nct_id": nct_id,
-                        "agency_class": lead_sponsor.get("class"),
-                        "name": lead_sponsor.get("name"),
-                        "is_lead": True,
+                        "agency_class": collaborator.class_details,
+                        "name": collaborator.name,
+                        "is_lead": False,
                     }
                 )
 
@@ -185,8 +198,12 @@ class Transformer:
                     # If that fails, try to parse as 'YYYY-MM'
                     return datetime.strptime(date_str, "%Y-%m")
                 except ValueError:
-                    # Add more formats here if needed
-                    return None
+                    try:
+                        # Finally, try to parse as 'YYYY'
+                        return datetime.strptime(date_str, "%Y")
+                    except ValueError:
+                        # Add more formats here if needed
+                        return None
 
     def get_dataframes(self) -> Dict[str, pd.DataFrame]:
         """

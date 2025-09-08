@@ -26,6 +26,16 @@ class Outcome(BaseModel):
     time_frame: Optional[str] = Field(None, alias="timeFrame")
 
 
+class Sponsor(BaseModel):
+    name: Optional[str] = None
+    class_details: Optional[str] = Field(None, alias="class")
+
+
+class SponsorCollaboratorsModule(BaseModel):
+    lead_sponsor: Optional[Sponsor] = Field(None, alias="leadSponsor")
+    collaborators: Optional[List[Sponsor]] = None
+
+
 class OutcomesModule(BaseModel):
     primary_outcomes: Optional[List[Outcome]] = Field(None, alias="primaryOutcomes")
     secondary_outcomes: Optional[List[Outcome]] = Field(None, alias="secondaryOutcomes")
@@ -38,7 +48,7 @@ class ProtocolSection(BaseModel):
         None, alias="identificationModule"
     )
     status_module: Optional[dict[str, Any]] = Field(None, alias="statusModule")
-    sponsor_collaborators_module: Optional[dict[str, Any]] = Field(
+    sponsor_collaborators_module: Optional[SponsorCollaboratorsModule] = Field(
         None, alias="sponsorCollaboratorsModule"
     )
     oversight_module: Optional[dict[str, Any]] = Field(None, alias="oversightModule")
