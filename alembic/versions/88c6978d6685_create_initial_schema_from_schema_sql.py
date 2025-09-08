@@ -5,6 +5,7 @@ Revises:
 Create Date: 2025-09-07 22:43:44.428771
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -13,7 +14,7 @@ from py_load_clinicaltrialsgov import sql
 
 
 # revision identifiers, used by Alembic.
-revision: str = '88c6978d6685'
+revision: str = "88c6978d6685"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

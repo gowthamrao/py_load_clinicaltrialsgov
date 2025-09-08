@@ -110,9 +110,9 @@ class Orchestrator:
                     # Parent tables use 'upsert', child tables use 'delete_insert'
                     # to ensure the full set of child records is replaced.
                     is_parent_table = primary_keys == ["nct_id"]
-                    strategy: Literal[
-                        "upsert", "delete_insert"
-                    ] = "upsert" if is_parent_table else "delete_insert"
+                    strategy: Literal["upsert", "delete_insert"] = (
+                        "upsert" if is_parent_table else "delete_insert"
+                    )
 
                     self.connector.execute_merge(table_name, primary_keys, strategy)
 

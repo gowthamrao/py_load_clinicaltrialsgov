@@ -1,5 +1,10 @@
 import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+)
 from typing import Iterator, Dict, Any, Optional
 from datetime import datetime
 
@@ -7,6 +12,7 @@ from py_load_clinicaltrialsgov.config import settings
 from py_load_clinicaltrialsgov.models.api_models import APIResponse, Study
 
 BASE_URL = "https://clinicaltrials.gov/api/v2/studies"
+
 
 class APIClient:
     """
@@ -32,7 +38,9 @@ class APIClient:
         response.raise_for_status()
         return APIResponse.model_validate(response.json())
 
-    def get_all_studies(self, updated_since: Optional[datetime] = None) -> Iterator[Study]:
+    def get_all_studies(
+        self, updated_since: Optional[datetime] = None
+    ) -> Iterator[Study]:
         """
         Fetches all studies from the API, handling pagination.
 

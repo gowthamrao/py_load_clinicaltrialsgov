@@ -91,7 +91,9 @@ class DatabaseConnectorInterface(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def manage_transaction(self, action: Literal["begin", "commit", "rollback"]) -> None:
+    def manage_transaction(
+        self, action: Literal["begin", "commit", "rollback"]
+    ) -> None:
         """
         Manage a database transaction.
 

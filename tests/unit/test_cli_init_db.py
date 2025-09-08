@@ -5,9 +5,12 @@ from py_load_clinicaltrialsgov.cli import app
 
 runner = CliRunner()
 
-@patch('py_load_clinicaltrialsgov.cli.get_connector')
-@patch('py_load_clinicaltrialsgov.cli.migrate_db')
-def test_init_db_aborted(mock_migrate_db, mock_get_connector):
+
+@patch("py_load_clinicaltrialsgov.cli.get_connector")
+@patch("py_load_clinicaltrialsgov.cli.migrate_db")
+def test_init_db_aborted(
+    mock_migrate_db: MagicMock, mock_get_connector: MagicMock
+) -> None:
     """
     Tests that the init-db command aborts if the user does not confirm.
     """
@@ -20,9 +23,12 @@ def test_init_db_aborted(mock_migrate_db, mock_get_connector):
     mock_get_connector.assert_not_called()
     mock_migrate_db.assert_not_called()
 
-@patch('py_load_clinicaltrialsgov.cli.get_connector')
-@patch('py_load_clinicaltrialsgov.cli.migrate_db')
-def test_init_db_successful(mock_migrate_db, mock_get_connector):
+
+@patch("py_load_clinicaltrialsgov.cli.get_connector")
+@patch("py_load_clinicaltrialsgov.cli.migrate_db")
+def test_init_db_successful(
+    mock_migrate_db: MagicMock, mock_get_connector: MagicMock
+) -> None:
     """
     Tests that the init-db command calls the correct functions when confirmed.
     """
@@ -36,9 +42,12 @@ def test_init_db_successful(mock_migrate_db, mock_get_connector):
     mock_connector.initialize_schema.assert_called_once()
     mock_migrate_db.assert_called_once_with(revision="head")
 
-@patch('py_load_clinicaltrialsgov.cli.get_connector')
-@patch('py_load_clinicaltrialsgov.cli.migrate_db')
-def test_init_db_force(mock_migrate_db, mock_get_connector):
+
+@patch("py_load_clinicaltrialsgov.cli.get_connector")
+@patch("py_load_clinicaltrialsgov.cli.migrate_db")
+def test_init_db_force(
+    mock_migrate_db: MagicMock, mock_get_connector: MagicMock
+) -> None:
     """
     Tests that the init-db command runs without a prompt when --force is used.
     """

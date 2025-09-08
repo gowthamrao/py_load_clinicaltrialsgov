@@ -3,6 +3,7 @@ from typing import Dict, List, Any
 from py_load_clinicaltrialsgov.models.api_models import Study
 from datetime import datetime, UTC
 
+
 class Transformer:
     """
     Transforms raw study data from the API into normalized dataframes.
@@ -20,7 +21,10 @@ class Transformer:
         """
         Transforms a single study object and appends the data to internal lists.
         """
-        if not study.protocol_section.identification_module or not study.protocol_section.identification_module.get("nctId"):
+        if (
+            not study.protocol_section.identification_module
+            or not study.protocol_section.identification_module.get("nctId")
+        ):
             # Cannot process a study without its primary identifier.
             return
 
@@ -32,7 +36,6 @@ class Transformer:
         self._transform_conditions(nct_id, study)
         self._transform_interventions(nct_id, study)
         self._transform_outcomes(nct_id, study)
-
 
     def _transform_raw_studies(self, nct_id: str, study: Study) -> None:
         last_updated_str = None
@@ -54,6 +57,7 @@ class Transformer:
     def _transform_studies_table(self, nct_id: str, study: Study) -> None:
         start_date_str = None
         completion_date_str = None
+        overall_status = None
         if study.protocol_section.status_module:
             start_date_str = study.protocol_section.status_module.get(
                 "startDateStruct", {}
@@ -61,6 +65,7 @@ class Transformer:
             completion_date_str = study.protocol_section.status_module.get(
                 "primaryCompletionDateStruct", {}
             ).get("date")
+            overall_status = study.protocol_section.status_module.get("overallStatus")
 
         study_type = None
         if study.protocol_section.design_module:
@@ -72,20 +77,16 @@ class Transformer:
                 "briefSummary"
             )
 
+        # The identification_module is guaranteed to exist by the check
+        # in the main transform_study method.
+        identification_module = study.protocol_section.identification_module or {}
+
         self.studies.append(
             {
                 "nct_id": nct_id,
-                "brief_title": study.protocol_section.identification_module.get(
-                    "briefTitle"
-                ),
-                "official_title": study.protocol_section.identification_module.get(
-                    "officialTitle"
-                ),
-                "overall_status": study.protocol_section.status_module.get(
-                    "overallStatus"
-                )
-                if study.protocol_section.status_module
-                else None,
+                "brief_title": identification_module.get("briefTitle"),
+                "official_title": identification_module.get("officialTitle"),
+                "overall_status": overall_status,
                 "start_date": self._normalize_date(start_date_str),
                 "start_date_str": start_date_str,
                 "primary_completion_date": self._normalize_date(completion_date_str),
@@ -112,13 +113,9 @@ class Transformer:
 
     def _transform_conditions(self, nct_id: str, study: Study) -> None:
         if study.protocol_section.conditions_module:
-            conditions = study.protocol_section.conditions_module.get(
-                "conditions", []
-            )
+            conditions = study.protocol_section.conditions_module.get("conditions", [])
             for condition in conditions:
-                self.conditions.append(
-                    {"nct_id": nct_id, "name": condition}
-                )
+                self.conditions.append({"nct_id": nct_id, "name": condition})
 
     def _transform_interventions(self, nct_id: str, study: Study) -> None:
         if (
@@ -126,7 +123,9 @@ class Transformer:
             or not study.protocol_section.arms_interventions_module.interventions
         ):
             return
-        for intervention in study.protocol_section.arms_interventions_module.interventions:
+        for (
+            intervention
+        ) in study.protocol_section.arms_interventions_module.interventions:
             self.interventions.append(
                 {
                     "nct_id": nct_id,
