@@ -15,6 +15,7 @@ except ImportError:
 from py_load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
 from py_load_clinicaltrialsgov.config import settings
 
+
 class PostgresConnector(DatabaseConnectorInterface):
     """
     A PostgreSQL connector that implements the DatabaseConnectorInterface.
@@ -47,7 +48,9 @@ class PostgresConnector(DatabaseConnectorInterface):
             csv_buffer.seek(0)
 
             # Use COPY to load the data
-            with cur.copy(f"COPY {staging_table_name} FROM STDIN WITH (FORMAT CSV)") as copy:
+            with cur.copy(
+                f"COPY {staging_table_name} FROM STDIN WITH (FORMAT CSV)"
+            ) as copy:
                 copy.write(csv_buffer.read())
 
     def execute_merge(
@@ -115,7 +118,9 @@ class PostgresConnector(DatabaseConnectorInterface):
         Gets the timestamp of the last successful load from the load_history table.
         """
         with self.conn.cursor() as cur:
-            cur.execute("SELECT MAX(load_timestamp) FROM load_history WHERE status = 'SUCCESS'")
+            cur.execute(
+                "SELECT MAX(load_timestamp) FROM load_history WHERE status = 'SUCCESS'"
+            )
             result = cur.fetchone()
             return result[0] if result else None
 
@@ -124,9 +129,11 @@ class PostgresConnector(DatabaseConnectorInterface):
         Gets the most recent load history record.
         """
         with self.conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
-            cur.execute("SELECT * FROM load_history ORDER BY load_timestamp DESC LIMIT 1")
+            cur.execute(
+                "SELECT * FROM load_history ORDER BY load_timestamp DESC LIMIT 1"
+            )
             result = cur.fetchone()
-            return result
+            return dict(result) if result else None
 
     def get_last_successful_load_history(self) -> Dict[str, Any] | None:
         """
@@ -137,17 +144,18 @@ class PostgresConnector(DatabaseConnectorInterface):
                 "SELECT * FROM load_history WHERE status = 'SUCCESS' ORDER BY load_timestamp DESC LIMIT 1"
             )
             result = cur.fetchone()
-            return result
+            return dict(result) if result else None
 
     def record_load_history(self, status: str, metrics: Dict[str, Any]) -> None:
         """
         Records the outcome of an ETL run in the load_history table.
         """
         import json
+
         with self.conn.cursor() as cur:
             cur.execute(
                 "INSERT INTO load_history (load_timestamp, status, metrics) VALUES (%s, %s, %s)",
-                (datetime.now(UTC), status, json.dumps(metrics))
+                (datetime.now(UTC), status, json.dumps(metrics)),
             )
 
     def record_failed_study(
@@ -157,6 +165,7 @@ class PostgresConnector(DatabaseConnectorInterface):
         Logs a study that failed validation/transformation to the dead-letter queue.
         """
         import json
+
         with self.conn.cursor() as cur:
             cur.execute(
                 """
@@ -166,7 +175,9 @@ class PostgresConnector(DatabaseConnectorInterface):
                 (nct_id, json.dumps(payload), error_message),
             )
 
-    def manage_transaction(self, action: Literal["begin", "commit", "rollback"]) -> None:
+    def manage_transaction(
+        self, action: Literal["begin", "commit", "rollback"]
+    ) -> None:
         """
         Manages a database transaction.
         """

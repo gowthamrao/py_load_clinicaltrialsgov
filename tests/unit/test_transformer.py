@@ -2,9 +2,9 @@ import unittest
 from py_load_clinicaltrialsgov.transformer.transformer import Transformer
 from py_load_clinicaltrialsgov.models.api_models import Study
 
-class TestTransformer(unittest.TestCase):
 
-    def test_transform_study(self):
+class TestTransformer(unittest.TestCase):
+    def test_transform_study(self) -> None:
         # Create a mock study object
         mock_study_data = {
             "protocolSection": {
@@ -29,7 +29,7 @@ class TestTransformer(unittest.TestCase):
                 },
                 "conditionsModule": {
                     "conditions": ["Test Condition 1", "Test Condition 2"]
-                }
+                },
             },
             "derivedSection": {},
             "hasResults": False,
@@ -48,7 +48,10 @@ class TestTransformer(unittest.TestCase):
         self.assertEqual(len(dataframes["studies"]), 1)
         self.assertEqual(dataframes["studies"].iloc[0]["brief_title"], "Test Study")
         self.assertIsNotNone(dataframes["studies"].iloc[0]["start_date"])
-
+        self.assertEqual(dataframes["studies"].iloc[0]["start_date_str"], "2023-01")
+        self.assertEqual(
+            dataframes["studies"].iloc[0]["primary_completion_date_str"], "2024-01-01"
+        )
 
         # Assertions for sponsors
         self.assertEqual(len(dataframes["sponsors"]), 1)
@@ -57,26 +60,22 @@ class TestTransformer(unittest.TestCase):
         # Assertions for conditions
         self.assertEqual(len(dataframes["conditions"]), 2)
 
-    def test_normalize_date(self):
+    def test_normalize_date(self) -> None:
         from datetime import datetime
+
         transformer = Transformer()
 
         # Test valid full date
         self.assertEqual(
-            transformer._normalize_date("2023-05-15"),
-            datetime(2023, 5, 15)
+            transformer._normalize_date("2023-05-15"), datetime(2023, 5, 15)
         )
 
         # Test valid month-year date
-        self.assertEqual(
-            transformer._normalize_date("2023-07"),
-            datetime(2023, 7, 1)
-        )
+        self.assertEqual(transformer._normalize_date("2023-07"), datetime(2023, 7, 1))
 
         # Test valid long month-year date
         self.assertEqual(
-            transformer._normalize_date("February 2024"),
-            datetime(2024, 2, 1)
+            transformer._normalize_date("February 2024"), datetime(2024, 2, 1)
         )
 
         # Test invalid date string
@@ -85,5 +84,6 @@ class TestTransformer(unittest.TestCase):
         # Test None input
         self.assertIsNone(transformer._normalize_date(None))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

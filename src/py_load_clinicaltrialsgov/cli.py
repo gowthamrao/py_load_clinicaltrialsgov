@@ -4,6 +4,7 @@ import structlog
 import logging
 import sys
 import json
+from typing import Any
 from alembic.config import Config
 from alembic import command
 
@@ -101,7 +102,7 @@ def init_db(
 
 @app.command()
 def migrate_db(
-    revision: Annotated[str, typer.Option(help="The revision to upgrade to.")] = "head"
+    revision: Annotated[str, typer.Option(help="The revision to upgrade to.")] = "head",
 ) -> None:
     """Apply database migrations."""
     logger.info("running_database_migrations", revision=revision)
@@ -110,9 +111,11 @@ def migrate_db(
     logger.info("database_migrations_completed")
 
 
-def _print_history(title: str, history: dict) -> None:
+def _print_history(title: str, history: dict[str, Any]) -> None:
     """Helper function to pretty-print load history."""
-    status_color = typer.colors.GREEN if history["status"] == "SUCCESS" else typer.colors.RED
+    status_color = (
+        typer.colors.GREEN if history["status"] == "SUCCESS" else typer.colors.RED
+    )
     status_styled = typer.style(history["status"], fg=status_color, bold=True)
 
     typer.echo(typer.style(title, bold=True))
@@ -153,9 +156,7 @@ def status(
             if successful_history:
                 typer.echo("-" * 20)
                 typer.echo("However, a previously successful run was found.")
-                _print_history(
-                    "Details of Last Successful Run:", successful_history
-                )
+                _print_history("Details of Last Successful Run:", successful_history)
             else:
                 typer.echo("No prior successful runs were found.")
 
@@ -172,6 +173,7 @@ def status(
         logger.error("failed_to_get_status", error=str(e), exc_info=True)
         typer.echo(f"Error: Could not retrieve status. {e}", err=True)
         raise typer.Exit(code=1)
+
 
 if __name__ == "__main__":
     app()
