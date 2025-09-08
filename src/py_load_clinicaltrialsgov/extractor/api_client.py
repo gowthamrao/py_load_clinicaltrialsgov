@@ -1,10 +1,5 @@
 import httpx
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_exponential,
-    retry_if_exception_type,
-)
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 from typing import Iterator, Dict, Any, Optional
 from datetime import datetime
 
@@ -12,6 +7,20 @@ from py_load_clinicaltrialsgov.config import settings
 from py_load_clinicaltrialsgov.models.api_models import APIResponse, Study
 
 BASE_URL = "https://clinicaltrials.gov/api/v2/studies"
+
+
+def _is_retryable_exception(exception: BaseException) -> bool:
+    """
+    Determines if an exception is retryable.
+
+    Returns True for network timeouts, 429 (rate limiting), and 5xx server errors.
+    """
+    if isinstance(exception, httpx.TimeoutException):
+        return True
+    if isinstance(exception, httpx.HTTPStatusError):
+        status_code = exception.response.status_code
+        return status_code == 429 or 500 <= status_code < 600
+    return False
 
 
 class APIClient:
@@ -28,7 +37,7 @@ class APIClient:
     @retry(
         stop=stop_after_attempt(settings.api.max_retries),
         wait=wait_exponential(multiplier=1, min=1, max=10),
-        retry=retry_if_exception_type((httpx.TimeoutException, httpx.HTTPStatusError)),
+        retry=retry_if_exception(_is_retryable_exception),
     )
     def _fetch_page(self, params: Dict[str, Any]) -> APIResponse:
         """

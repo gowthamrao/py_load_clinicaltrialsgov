@@ -75,18 +75,10 @@ class PostgresConnector(DatabaseConnectorInterface):
 
     def execute_merge(self, table_name: str, primary_keys: List[str]) -> None:
         """
-        Merges data from a staging table to a final table.
-        It internally decides the merge strategy.
-        - 'upsert' for parent tables ('studies', 'raw_studies').
-        - 'delete_insert' for child tables.
+        Merges data from a staging table to a final table using a unified
+        UPSERT (INSERT ... ON CONFLICT) strategy for all tables.
         """
         staging_table_name = f"staging_{table_name}"
-
-        # Determine strategy based on table name
-        if table_name in ["studies", "raw_studies"]:
-            strategy = "upsert"
-        else:
-            strategy = "delete_insert"
 
         with self.conn.cursor() as cur:
             cur.execute(
@@ -100,37 +92,23 @@ class PostgresConnector(DatabaseConnectorInterface):
                 return
 
             col_names = ", ".join(f'"{c}"' for c in columns)
+            conflict_target = ", ".join(f'"{pk}"' for pk in primary_keys)
+            update_cols = [col for col in columns if col not in primary_keys]
 
-            if strategy == "upsert":
-                conflict_target = ", ".join(f'"{pk}"' for pk in primary_keys)
-                update_cols = [col for col in columns if col not in primary_keys]
+            if not update_cols:
+                on_conflict_action = "DO NOTHING"
+            else:
+                update_assignments = [
+                    f'"{col}" = EXCLUDED."{col}"' for col in update_cols
+                ]
+                update_set = ", ".join(update_assignments)
+                on_conflict_action = f"DO UPDATE SET {update_set}"
 
-                if not update_cols:
-                    on_conflict_action = "DO NOTHING"
-                else:
-                    update_assignments = [
-                        f'"{col}" = EXCLUDED."{col}"' for col in update_cols
-                    ]
-                    update_set = ", ".join(update_assignments)
-                    on_conflict_action = f"DO UPDATE SET {update_set}"
-
-                merge_sql = f"""
-                    INSERT INTO {table_name} ({col_names})
-                    SELECT {col_names} FROM {staging_table_name}
-                    ON CONFLICT ({conflict_target}) {on_conflict_action};
-                """
-            elif strategy == "delete_insert":
-                cur.execute(
-                    f"""
-                    DELETE FROM {table_name}
-                    WHERE nct_id IN (SELECT DISTINCT nct_id FROM {staging_table_name});
-                    """
-                )
-                merge_sql = f"""
-                    INSERT INTO {table_name} ({col_names})
-                    SELECT {col_names} FROM {staging_table_name};
-                """
-
+            merge_sql = f"""
+                INSERT INTO {table_name} ({col_names})
+                SELECT {col_names} FROM {staging_table_name}
+                ON CONFLICT ({conflict_target}) {on_conflict_action};
+            """
             cur.execute(merge_sql)
 
     def get_last_successful_load_timestamp(self) -> datetime | None:

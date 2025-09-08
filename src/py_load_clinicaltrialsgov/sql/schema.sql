@@ -24,14 +24,16 @@ CREATE TABLE IF NOT EXISTS sponsors (
     nct_id VARCHAR(255) NOT NULL,
     agency_class VARCHAR(255),
     name TEXT,
-    is_lead BOOLEAN
+    is_lead BOOLEAN,
+    CONSTRAINT uq_sponsors_natural_key UNIQUE (nct_id, name, agency_class)
 );
 CREATE INDEX IF NOT EXISTS idx_sponsors_nct_id ON sponsors(nct_id);
 
 CREATE TABLE IF NOT EXISTS conditions (
     id SERIAL PRIMARY KEY,
     nct_id VARCHAR(255) NOT NULL,
-    name TEXT
+    name TEXT,
+    CONSTRAINT uq_conditions_natural_key UNIQUE (nct_id, name)
 );
 CREATE INDEX IF NOT EXISTS idx_conditions_nct_id ON conditions(nct_id);
 
@@ -40,7 +42,8 @@ CREATE TABLE IF NOT EXISTS interventions (
     nct_id VARCHAR(255) NOT NULL,
     intervention_type VARCHAR(255),
     name TEXT,
-    description TEXT
+    description TEXT,
+    CONSTRAINT uq_interventions_natural_key UNIQUE (nct_id, intervention_type, name)
 );
 CREATE INDEX IF NOT EXISTS idx_interventions_nct_id ON interventions(nct_id);
 
@@ -50,7 +53,8 @@ CREATE TABLE IF NOT EXISTS design_outcomes (
     outcome_type VARCHAR(255),
     measure TEXT,
     time_frame TEXT,
-    description TEXT
+    description TEXT,
+    CONSTRAINT uq_design_outcomes_natural_key UNIQUE (nct_id, outcome_type, measure)
 );
 CREATE INDEX IF NOT EXISTS idx_design_outcomes_nct_id ON design_outcomes(nct_id);
 
