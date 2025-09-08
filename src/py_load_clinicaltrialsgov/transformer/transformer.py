@@ -200,3 +200,14 @@ class Transformer:
         }
         # Filter out empty dataframes
         return {name: df for name, df in dataframes.items() if not df.empty}
+
+    def clear(self) -> None:
+        """
+        Resets the internal data lists to clear the state for the next batch.
+        """
+        self.raw_studies.clear()
+        self.studies.clear()
+        self.sponsors.clear()
+        self.conditions.clear()
+        self.interventions.clear()
+        self.design_outcomes.clear()

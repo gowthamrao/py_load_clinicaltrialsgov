@@ -1,10 +1,12 @@
 import structlog
 import time
 from typing import Dict, List, Any, Literal
+from collections import Counter
 
 from py_load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
 from py_load_clinicaltrialsgov.extractor.api_client import APIClient
 from py_load_clinicaltrialsgov.transformer.transformer import Transformer
+from py_load_clinicaltrialsgov.config import settings
 
 logger = structlog.get_logger(__name__)
 
@@ -33,12 +35,43 @@ class Orchestrator:
         self.api_client = api_client
         self.transformer = transformer
 
+    def _load_and_clear_batch(self) -> Dict[str, int]:
+        """
+        Loads the current batch of data from the transformer into the database
+        and then clears the transformer's state.
+        """
+        batch_table_metrics: Dict[str, int] = {}
+        dataframes = self.transformer.get_dataframes()
+        for table_name, df in dataframes.items():
+            if not df.empty:
+                record_count_table = len(df)
+                batch_table_metrics[table_name] = record_count_table
+                logger.info(
+                    "loading_data_into_table",
+                    table_name=table_name,
+                    record_count=record_count_table,
+                )
+                primary_keys = self.TABLE_METADATA.get(table_name)
+                if not primary_keys:
+                    logger.error(
+                        "no_primary_key_defined_for_table", table_name=table_name
+                    )
+                    continue
+
+                self.connector.bulk_load_staging(table_name, df)
+                self.connector.execute_merge(table_name, primary_keys)
+
+        self.transformer.clear()
+        return batch_table_metrics
+
     def run_etl(self, load_type: str) -> None:
         """
         Executes the full ETL pipeline.
         """
         start_time = time.time()
-        log = logger.bind(load_type=load_type)
+        log = logger.bind(
+            load_type=load_type, batch_size=settings.etl.batch_size
+        )
         log.info("etl_process_started")
 
         try:
@@ -64,7 +97,10 @@ class Orchestrator:
                 updated_since=updated_since
             )
 
-            record_count = 0
+            total_record_count = 0
+            batch_record_count = 0
+            total_table_metrics: Counter[str] = Counter()
+
             for study in studies_iterator:
                 nct_id = (
                     study.protocol_section.identification_module.get("nctId")
@@ -73,9 +109,19 @@ class Orchestrator:
                 )
                 try:
                     self.transformer.transform_study(study)
-                    record_count += 1
-                    if record_count % 100 == 0:
-                        log.info("processed_studies_batch", record_count=record_count)
+                    total_record_count += 1
+                    batch_record_count += 1
+
+                    if batch_record_count >= settings.etl.batch_size:
+                        log.info(
+                            "processing_batch",
+                            batch_record_count=batch_record_count,
+                            total_record_count=total_record_count,
+                        )
+                        batch_metrics = self._load_and_clear_batch()
+                        total_table_metrics.update(batch_metrics)
+                        batch_record_count = 0
+
                 except Exception as e:
                     log.error(
                         "study_transformation_failed",
@@ -90,37 +136,26 @@ class Orchestrator:
                             error_message=str(e),
                         )
 
-            log.info("finished_processing_studies", total_record_count=record_count)
+            # Load any remaining records in the final batch
+            if batch_record_count > 0:
+                log.info(
+                    "processing_final_batch",
+                    batch_record_count=batch_record_count,
+                    total_record_count=total_record_count,
+                )
+                final_batch_metrics = self._load_and_clear_batch()
+                total_table_metrics.update(final_batch_metrics)
 
-            table_metrics = {}
-            dataframes = self.transformer.get_dataframes()
-            for table_name, df in dataframes.items():
-                if not df.empty:
-                    record_count_table = len(df)
-                    table_metrics[table_name] = record_count_table
-                    log.info(
-                        "loading_data_into_table",
-                        table_name=table_name,
-                        record_count=record_count_table,
-                    )
-                    primary_keys = self.TABLE_METADATA.get(table_name)
-                    if not primary_keys:
-                        log.error(
-                            "no_primary_key_defined_for_table", table_name=table_name
-                        )
-                        continue
-
-                    self.connector.bulk_load_staging(table_name, df)
-                    self.connector.execute_merge(table_name, primary_keys)
+            log.info("finished_processing_studies", total_record_count=total_record_count)
 
             duration = time.time() - start_time
             metrics: Dict[str, Any] = {
                 "duration_seconds": round(duration, 2),
-                "records_processed": record_count,
+                "records_processed": total_record_count,
                 "throughput_records_per_sec": (
-                    round(record_count / duration, 2) if duration > 0 else 0
+                    round(total_record_count / duration, 2) if duration > 0 else 0
                 ),
-                "records_loaded_per_table": table_metrics,
+                "records_loaded_per_table": dict(total_table_metrics),
             }
 
             self.connector.record_load_history("SUCCESS", metrics)

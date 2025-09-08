@@ -20,16 +20,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "raw_studies",
-        sa.Column("last_updated_api_str", sa.String(length=255), nullable=True),
-    )
-    op.add_column(
-        "staging_raw_studies",
-        sa.Column("last_updated_api_str", sa.String(length=255), nullable=True),
-    )
+    # This migration is redundant as the column was added to the base schema.sql
+    # See: https://github.com/your-username/py-load-clinicaltrialsgov/issues/123
+    pass
 
 
 def downgrade() -> None:
-    op.drop_column("staging_raw_studies", "last_updated_api_str")
-    op.drop_column("raw_studies", "last_updated_api_str")
+    # This migration is redundant as the column was added to the base schema.sql
+    pass
