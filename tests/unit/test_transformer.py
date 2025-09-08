@@ -84,6 +84,51 @@ class TestTransformer(unittest.TestCase):
         # Test None input
         self.assertIsNone(transformer._normalize_date(None))
 
+        # Test year-only date
+        self.assertEqual(transformer._normalize_date("2025"), datetime(2025, 1, 1))
+
+    def test_transform_study_with_collaborators(self) -> None:
+        mock_study_data = {
+            "protocolSection": {
+                "identificationModule": {"nctId": "NCT54321"},
+                "statusModule": {
+                    "startDateStruct": {"date": "2022"},
+                },
+                "sponsorCollaboratorsModule": {
+                    "leadSponsor": {"class": "INDUSTRY", "name": "Lead Sponsor Inc."},
+                    "collaborators": [
+                        {"class": "NIH", "name": "Collaborator 1"},
+                        {"class": "OTHER", "name": "Collaborator 2"},
+                    ],
+                },
+            },
+            "derivedSection": {},
+            "hasResults": False,
+        }
+        study = Study.model_validate(mock_study_data)
+        transformer = Transformer()
+        transformer.transform_study(study, mock_study_data)
+        dataframes = transformer.get_dataframes()
+
+        # Assertions for sponsors
+        sponsors_df = dataframes["sponsors"]
+        self.assertEqual(len(sponsors_df), 3)
+
+        lead_sponsor = sponsors_df[sponsors_df["is_lead"] == True]
+        self.assertEqual(len(lead_sponsor), 1)
+        self.assertEqual(lead_sponsor.iloc[0]["name"], "Lead Sponsor Inc.")
+
+        collaborators = sponsors_df[sponsors_df["is_lead"] == False]
+        self.assertEqual(len(collaborators), 2)
+        self.assertIn("Collaborator 1", collaborators["name"].values)
+        self.assertIn("Collaborator 2", collaborators["name"].values)
+
+        # Assertions for date parsing
+        studies_df = dataframes["studies"]
+        self.assertEqual(studies_df.iloc[0]["start_date"].year, 2022)
+        self.assertEqual(studies_df.iloc[0]["start_date"].month, 1)
+        self.assertEqual(studies_df.iloc[0]["start_date"].day, 1)
+
 
 if __name__ == "__main__":
     unittest.main()
