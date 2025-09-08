@@ -128,6 +128,17 @@ class PostgresConnector(DatabaseConnectorInterface):
             result = cur.fetchone()
             return result
 
+    def get_last_successful_load_history(self) -> Dict[str, Any] | None:
+        """
+        Gets the most recent successful load history record.
+        """
+        with self.conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+            cur.execute(
+                "SELECT * FROM load_history WHERE status = 'SUCCESS' ORDER BY load_timestamp DESC LIMIT 1"
+            )
+            result = cur.fetchone()
+            return result
+
     def record_load_history(self, status: str, metrics: Dict[str, Any]) -> None:
         """
         Records the outcome of an ETL run in the load_history table.
