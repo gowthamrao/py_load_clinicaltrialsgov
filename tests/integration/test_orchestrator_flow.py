@@ -14,33 +14,34 @@ from .test_full_etl import postgres_container, db_connector
 # A valid study record that should process successfully
 VALID_STUDY_PAYLOAD = {
     "protocolSection": {
-        "identificationModule": {
-            "nctId": "NCT000001",
-            "briefTitle": "Valid Study"
-        },
+        "identificationModule": {"nctId": "NCT000001", "briefTitle": "Valid Study"},
         "statusModule": {
             "overallStatus": "COMPLETED",
-            "lastUpdatePostDateStruct": {
-                "date": "2024-01-01"
-            }
+            "lastUpdatePostDateStruct": {"date": "2024-01-01"},
         },
-        "conditionsModule": {
-            "conditions": ["Condition 1"]
-        }
-    }
+        "conditionsModule": {"conditions": ["Condition 1"]},
+    },
+    "derivedSection": {
+        "conditionBrowseModule": {},
+        "interventionBrowseModule": {},
+        "miscInfoModule": {},
+    },
+    "hasResults": False,
 }
 
 # An invalid study record that should fail Pydantic validation
 # 'identificationModule' is missing the required 'nctId' field
 INVALID_STUDY_PAYLOAD = {
     "protocolSection": {
-        "identificationModule": {
-            "briefTitle": "Invalid Study"
-        },
-        "statusModule": {
-            "overallStatus": "UNKNOWN"
-        }
-    }
+        "identificationModule": {"briefTitle": "Invalid Study"},
+        "statusModule": {"overallStatus": "UNKNOWN"},
+    },
+    "derivedSection": {
+        "conditionBrowseModule": {},
+        "interventionBrowseModule": {},
+        "miscInfoModule": {},
+    },
+    "hasResults": False,
 }
 
 # A study that is valid but has a different NCT ID
@@ -49,10 +50,16 @@ INVALID_STUDY_PAYLOAD_WITH_ID = {
     "protocolSection": {
         "identificationModule": {
             "nctId": "NCT000002",
-            "briefTitle": "Invalid Study with ID"
+            "briefTitle": "Invalid Study with ID",
         },
         # Missing required 'statusModule'
-    }
+    },
+    "derivedSection": {
+        "conditionBrowseModule": {},
+        "interventionBrowseModule": {},
+        "miscInfoModule": {},
+    },
+    "hasResults": False,
 }
 
 
@@ -109,7 +116,7 @@ def test_orchestrator_full_run(
         cur.execute("SELECT nct_id, error_message FROM dead_letter_queue WHERE nct_id IS NULL")
         result_no_id = cur.fetchone()
         assert result_no_id is not None
-        assert "Pydantic Validation Error" in result_no_id[1]
+        assert "Transformation Error" in result_no_id[1]
 
         # 5. Check the record that failed due to other missing fields but had an ID
         cur.execute("SELECT payload, error_message FROM dead_letter_queue WHERE nct_id = 'NCT000002'")

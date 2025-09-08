@@ -133,12 +133,11 @@ class Orchestrator:
                         error=str(e),
                         exc_info=True,
                     )
-                    if nct_id:
-                        self.connector.record_failed_study(
-                            nct_id=nct_id,
-                            payload=study_dict,
-                            error_message=f"Transformation Error: {e}",
-                        )
+                    self.connector.record_failed_study(
+                        nct_id=nct_id,
+                        payload=study_dict,
+                        error_message=f"Transformation Error: {e}",
+                    )
                     continue  # Move to the next study
 
                 total_record_count += 1
