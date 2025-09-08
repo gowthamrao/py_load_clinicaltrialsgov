@@ -32,8 +32,8 @@ class TestOrchestrator(unittest.TestCase):
         # An invalid study dict that will cause a validation error
         self.invalid_study_dict = {
             "protocolSection": {
-                # Missing identificationModule, which is required
-                "statusModule": {"overallStatus": "COMPLETED"},
+                # Missing statusModule, which is required, to trigger validation error
+                "identificationModule": {"nctId": "NCT00000002"},
             },
             "derivedSection": {},
             "hasResults": False,
@@ -53,9 +53,10 @@ class TestOrchestrator(unittest.TestCase):
             [self.valid_study_dict, self.invalid_study_dict]
         )
 
-        # Arrange: The transformer will return a dummy dataframe
-        # We need to mock get_dataframes and clear to avoid issues with pandas
-        self.mock_transformer.get_dataframes.return_value = {"studies": "dummy_df"}
+        # Arrange: The transformer will return a mock dataframe
+        mock_df = MagicMock()
+        mock_df.empty = False  # Simulate a non-empty dataframe
+        self.mock_transformer.get_dataframes.return_value = {"studies": mock_df}
         self.mock_transformer.clear.return_value = None
 
         # Act
@@ -74,7 +75,7 @@ class TestOrchestrator(unittest.TestCase):
         self.mock_connector.record_failed_study.assert_called_once()
         # Check that the payload sent to dead-letter queue is the invalid one
         _, kwargs = self.mock_connector.record_failed_study.call_args
-        self.assertEqual(kwargs['nct_id'], None) # nct_id could not be parsed
+        self.assertEqual(kwargs['nct_id'], "NCT00000002") # nct_id should be parsed even if validation fails
         self.assertEqual(kwargs['payload'], self.invalid_study_dict)
         self.assertIn("Pydantic Validation Error", kwargs['error_message'])
 

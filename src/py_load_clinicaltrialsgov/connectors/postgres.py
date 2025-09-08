@@ -55,24 +55,24 @@ class PostgresConnector(DatabaseConnectorInterface):
     def bulk_load_staging(self, table_name: str, data: pd.DataFrame) -> None:
         """
         Bulk loads a DataFrame into a staging table using the COPY protocol.
-        """
-        import io
 
+        This implementation uses an iterative approach with `copy.write_row`
+        to stream data efficiently without creating a large intermediate
+        CSV file in memory.
+        """
         staging_table_name = f"staging_{table_name}"
+        # The columns in the DataFrame must match the order in the table.
+        # It's safer to specify them explicitly in the COPY command.
+        cols = ",".join(f'"{c}"' for c in data.columns)
+
         with self.conn.cursor() as cur:
             # Truncate the staging table before loading
             cur.execute(f"TRUNCATE TABLE {staging_table_name}")
 
-            # Create an in-memory CSV file
-            csv_buffer = io.StringIO()
-            data.to_csv(csv_buffer, index=False, header=False)
-            csv_buffer.seek(0)
-
-            # Use COPY to load the data
-            with cur.copy(
-                f"COPY {staging_table_name} FROM STDIN WITH (FORMAT CSV)"
-            ) as copy:
-                copy.write(csv_buffer.read())
+            # Use COPY with write_row for efficient, iterative loading.
+            with cur.copy(f"COPY {staging_table_name} ({cols}) FROM STDIN") as copy:
+                for row in data.itertuples(index=False, name=None):
+                    copy.write_row(row)
 
     def execute_merge(self, table_name: str, primary_keys: List[str]) -> None:
         """
