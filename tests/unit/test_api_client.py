@@ -2,7 +2,6 @@ import httpx
 import pytest
 from datetime import datetime
 from py_load_clinicaltrialsgov.extractor.api_client import APIClient
-from py_load_clinicaltrialsgov.models.api_models import APIResponse, Study
 
 @pytest.fixture
 def mock_transport():

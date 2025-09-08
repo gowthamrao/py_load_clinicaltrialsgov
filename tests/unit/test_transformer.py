@@ -1,8 +1,6 @@
 import unittest
-from unittest.mock import MagicMock
-import pandas as pd
 from py_load_clinicaltrialsgov.transformer.transformer import Transformer
-from py_load_clinicaltrialsgov.models.api_models import Study, ProtocolSection, DerivedSection
+from py_load_clinicaltrialsgov.models.api_models import Study
 
 class TestTransformer(unittest.TestCase):
 

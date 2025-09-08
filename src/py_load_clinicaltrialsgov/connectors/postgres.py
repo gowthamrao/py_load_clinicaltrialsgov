@@ -20,7 +20,7 @@ class PostgresConnector(DatabaseConnectorInterface):
     A PostgreSQL connector that implements the DatabaseConnectorInterface.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.conn = psycopg.connect(settings.db.dsn)
 
     def initialize_schema(self) -> None:
@@ -50,20 +50,23 @@ class PostgresConnector(DatabaseConnectorInterface):
             with cur.copy(f"COPY {staging_table_name} FROM STDIN WITH (FORMAT CSV)") as copy:
                 copy.write(csv_buffer.read())
 
-    def execute_merge(self, table_name: str, primary_keys: List[str]) -> None:
+    def execute_merge(
+        self,
+        table_name: str,
+        primary_keys: List[str],
+        strategy: Literal["upsert", "delete_insert"],
+    ) -> None:
         """
-        Merges data from a staging table to a final table using an efficient
-        INSERT ON CONFLICT (UPSERT) for parent tables and a DELETE/INSERT
-        pattern for child tables.
+        Merges data from a staging table to a final table using either a pure
+        UPSERT strategy or a DELETE/INSERT strategy.
         """
         staging_table_name = f"staging_{table_name}"
 
         with self.conn.cursor() as cur:
-            # Get column names from the final table, excluding the serial `id`
             cur.execute(
                 "SELECT column_name FROM information_schema.columns "
                 "WHERE table_name = %s AND column_name != 'id'",
-                (table_name,)
+                (table_name,),
             )
             columns = [row[0] for row in cur.fetchall()]
 
@@ -72,41 +75,38 @@ class PostgresConnector(DatabaseConnectorInterface):
 
             col_names = ", ".join(f'"{c}"' for c in columns)
 
-            # For parent tables (studies, raw_studies), use UPSERT logic.
-            # For child tables, use DELETE/INSERT.
-            # The caller (transformer) is responsible for knowing which tables are which.
-            # A simple heuristic is that parent tables have a single-column PK.
-            is_parent_table = len(primary_keys) == 1
-
-            if is_parent_table:
+            if strategy == "upsert":
                 conflict_target = ", ".join(f'"{pk}"' for pk in primary_keys)
-                update_cols = ", ".join(
-                    f'"{col}" = EXCLUDED."{col}"'
-                    for col in columns
-                    if col not in primary_keys
-                )
-                on_conflict_action = (
-                    "DO NOTHING" if not update_cols else f"DO UPDATE SET {update_cols}"
-                )
+                update_cols = [col for col in columns if col not in primary_keys]
+
+                if not update_cols:
+                    on_conflict_action = "DO NOTHING"
+                else:
+                    # Create the "col" = EXCLUDED."col" part for each column
+                    update_assignments = [
+                        f'"{col}" = EXCLUDED."{col}"' for col in update_cols
+                    ]
+                    update_set = ", ".join(update_assignments)
+                    on_conflict_action = f"DO UPDATE SET {update_set}"
 
                 merge_sql = f"""
                     INSERT INTO {table_name} ({col_names})
                     SELECT {col_names} FROM {staging_table_name}
-                    ON CONFLICT ({conflict_target}) {on_conflict_action}
+                    ON CONFLICT ({conflict_target}) {on_conflict_action};
+                """
+            elif strategy == "delete_insert":
+                cur.execute(
+                    f"""
+                    DELETE FROM {table_name}
+                    WHERE nct_id IN (SELECT DISTINCT nct_id FROM {staging_table_name});
+                    """
+                )
+                merge_sql = f"""
+                    INSERT INTO {table_name} ({col_names})
+                    SELECT {col_names} FROM {staging_table_name};
                 """
             else:
-                # For child tables, clear old records for the studies being updated.
-                # This is necessary to replace the entire set of child records for a study.
-                cur.execute(f"""
-                    DELETE FROM {table_name}
-                    WHERE nct_id IN (SELECT DISTINCT nct_id FROM {staging_table_name})
-                """)
-
-                # After deleting, perform a simple INSERT.
-                merge_sql = f"""
-                    INSERT INTO {table_name} ({col_names})
-                    SELECT {col_names} FROM {staging_table_name}
-                """
+                raise ValueError(f"Unknown merge strategy: {strategy}")
 
             cur.execute(merge_sql)
 

@@ -4,6 +4,7 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
+from py_load_clinicaltrialsgov.config import settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -24,8 +25,6 @@ target_metadata = None
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
-# Import your application's settings
-from py_load_clinicaltrialsgov.config import settings
 
 # Set the database URL from your application's settings
 # This ensures Alembic uses the same database connection as your application

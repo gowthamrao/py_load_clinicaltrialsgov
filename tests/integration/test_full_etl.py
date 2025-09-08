@@ -3,7 +3,6 @@ from testcontainers.postgres import PostgresContainer
 import pandas as pd
 from py_load_clinicaltrialsgov.connectors.postgres import PostgresConnector
 from py_load_clinicaltrialsgov.config import settings
-from datetime import datetime
 
 from alembic.config import Config
 from alembic import command
@@ -67,11 +66,19 @@ def test_full_etl_flow(db_connector):
 
     # Load initial data
     db_connector.bulk_load_staging("studies", studies_df)
-    db_connector.execute_merge("studies", primary_keys=["nct_id"])
+    db_connector.execute_merge("studies", primary_keys=["nct_id"], strategy="upsert")
     db_connector.bulk_load_staging("interventions", interventions_df)
-    db_connector.execute_merge("interventions", primary_keys=["nct_id", "intervention_type", "name"])
+    db_connector.execute_merge(
+        "interventions",
+        primary_keys=["nct_id", "intervention_type", "name"],
+        strategy="delete_insert",
+    )
     db_connector.bulk_load_staging("design_outcomes", outcomes_df)
-    db_connector.execute_merge("design_outcomes", primary_keys=["nct_id", "outcome_type", "measure"])
+    db_connector.execute_merge(
+        "design_outcomes",
+        primary_keys=["nct_id", "outcome_type", "measure"],
+        strategy="delete_insert",
+    )
 
     # Verify initial load
     with db_connector.conn.cursor() as cur:
@@ -101,9 +108,13 @@ def test_full_etl_flow(db_connector):
 
     # Load updated data
     db_connector.bulk_load_staging("studies", updated_studies_df)
-    db_connector.execute_merge("studies", primary_keys=["nct_id"])
+    db_connector.execute_merge("studies", primary_keys=["nct_id"], strategy="upsert")
     db_connector.bulk_load_staging("interventions", updated_interventions_df)
-    db_connector.execute_merge("interventions", primary_keys=["nct_id", "intervention_type", "name"])
+    db_connector.execute_merge(
+        "interventions",
+        primary_keys=["nct_id", "intervention_type", "name"],
+        strategy="delete_insert",
+    )
 
     # Verify the update
     with db_connector.conn.cursor() as cur:
