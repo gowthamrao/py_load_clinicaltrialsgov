@@ -1,4 +1,5 @@
 import pandas as pd
+import json
 from typing import Dict, List, Any
 from py_load_clinicaltrialsgov.models.api_models import Study
 from datetime import datetime, UTC
@@ -17,7 +18,7 @@ class Transformer:
         self.interventions: List[Dict[str, Any]] = []
         self.design_outcomes: List[Dict[str, Any]] = []
 
-    def transform_study(self, study: Study) -> None:
+    def transform_study(self, study: Study, raw_study_payload: Dict[str, Any]) -> None:
         """
         Transforms a single study object and appends the data to internal lists.
         """
@@ -30,19 +31,20 @@ class Transformer:
 
         nct_id = study.protocol_section.identification_module["nctId"]
 
-        self._transform_raw_studies(nct_id, study)
+        self._transform_raw_studies(nct_id, raw_study_payload)
         self._transform_studies_table(nct_id, study)
         self._transform_sponsors(nct_id, study)
         self._transform_conditions(nct_id, study)
         self._transform_interventions(nct_id, study)
         self._transform_outcomes(nct_id, study)
 
-    def _transform_raw_studies(self, nct_id: str, study: Study) -> None:
-        last_updated_str = None
-        if study.protocol_section.status_module:
-            last_updated_str = study.protocol_section.status_module.get(
-                "lastUpdatePostDateStruct", {}
-            ).get("date")
+    def _transform_raw_studies(self, nct_id: str, raw_payload: Dict[str, Any]) -> None:
+        last_updated_str = (
+            raw_payload.get("protocolSection", {})
+            .get("statusModule", {})
+            .get("lastUpdatePostDateStruct", {})
+            .get("date")
+        )
 
         self.raw_studies.append(
             {
@@ -50,7 +52,7 @@ class Transformer:
                 "last_updated_api": self._normalize_date(last_updated_str),
                 "last_updated_api_str": last_updated_str,
                 "ingestion_timestamp": datetime.now(UTC),
-                "payload": study.model_dump_json(by_alias=True),
+                "payload": json.dumps(raw_payload),
             }
         )
 

@@ -1,12 +1,14 @@
 import structlog
 import time
-from typing import Dict, List, Any, Literal
+from typing import Dict, List, Any
 from collections import Counter
+from pydantic import ValidationError
 
 from py_load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
 from py_load_clinicaltrialsgov.extractor.api_client import APIClient
 from py_load_clinicaltrialsgov.transformer.transformer import Transformer
 from py_load_clinicaltrialsgov.config import settings
+from py_load_clinicaltrialsgov.models.api_models import Study
 
 logger = structlog.get_logger(__name__)
 
@@ -101,27 +103,29 @@ class Orchestrator:
             batch_record_count = 0
             total_table_metrics: Counter[str] = Counter()
 
-            for study in studies_iterator:
-                nct_id = (
-                    study.protocol_section.identification_module.get("nctId")
-                    if study.protocol_section.identification_module
-                    else None
-                )
+            for study_dict in studies_iterator:
+                # Extract NCT ID safely before validation
+                nct_id = study_dict.get("protocolSection", {}).get("identificationModule", {}).get("nctId")
+
                 try:
-                    self.transformer.transform_study(study)
-                    total_record_count += 1
-                    batch_record_count += 1
+                    # 1. Validate each study individually
+                    validated_study = Study.model_validate(study_dict)
 
-                    if batch_record_count >= settings.etl.batch_size:
-                        log.info(
-                            "processing_batch",
-                            batch_record_count=batch_record_count,
-                            total_record_count=total_record_count,
-                        )
-                        batch_metrics = self._load_and_clear_batch()
-                        total_table_metrics.update(batch_metrics)
-                        batch_record_count = 0
+                    # 2. Transform if validation is successful
+                    self.transformer.transform_study(validated_study, study_dict)
 
+                except ValidationError as e:
+                    log.error(
+                        "study_validation_failed",
+                        nct_id=nct_id,
+                        error=str(e),
+                    )
+                    self.connector.record_failed_study(
+                        nct_id=nct_id,
+                        payload=study_dict,
+                        error_message=f"Pydantic Validation Error: {e}",
+                    )
+                    continue  # Move to the next study
                 except Exception as e:
                     log.error(
                         "study_transformation_failed",
@@ -132,9 +136,23 @@ class Orchestrator:
                     if nct_id:
                         self.connector.record_failed_study(
                             nct_id=nct_id,
-                            payload=study.model_dump(),
-                            error_message=str(e),
+                            payload=study_dict,
+                            error_message=f"Transformation Error: {e}",
                         )
+                    continue  # Move to the next study
+
+                total_record_count += 1
+                batch_record_count += 1
+
+                if batch_record_count >= settings.etl.batch_size:
+                    log.info(
+                        "processing_batch",
+                        batch_record_count=batch_record_count,
+                        total_record_count=total_record_count,
+                    )
+                    batch_metrics = self._load_and_clear_batch()
+                    total_table_metrics.update(batch_metrics)
+                    batch_record_count = 0
 
             # Load any remaining records in the final batch
             if batch_record_count > 0:
