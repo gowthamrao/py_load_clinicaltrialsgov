@@ -14,7 +14,15 @@ from typing import Generator
 
 @pytest.fixture(scope="module")
 def postgres_container() -> Generator[PostgresContainer, None, None]:
-    with PostgresContainer("postgres:latest", driver=None) as container:
+    # Use a public ECR mirror to avoid Docker Hub rate limits in CI
+    image_name = "public.ecr.aws/bitnami/postgresql:latest"
+    # Set Bitnami-specific environment variables for initialization
+    env = {
+        "POSTGRESQL_USERNAME": "test",
+        "POSTGRESQL_PASSWORD": "test",
+        "POSTGRESQL_DATABASE": "test",
+    }
+    with PostgresContainer(image_name, driver=None, env=env) as container:
         original_dsn = settings.db.dsn
 
         # The plain DSN for the application
@@ -115,18 +123,14 @@ def test_full_etl_flow(db_connector: DatabaseConnectorInterface) -> None:
 
     # Load initial data
     db_connector.bulk_load_staging("studies", studies_df)
-    db_connector.execute_merge("studies", primary_keys=["nct_id"], strategy="upsert")
+    db_connector.execute_merge("studies", primary_keys=["nct_id"])
     db_connector.bulk_load_staging("interventions", interventions_df)
     db_connector.execute_merge(
-        "interventions",
-        primary_keys=["nct_id", "intervention_type", "name"],
-        strategy="delete_insert",
+        "interventions", primary_keys=["nct_id", "intervention_type", "name"]
     )
     db_connector.bulk_load_staging("design_outcomes", outcomes_df)
     db_connector.execute_merge(
-        "design_outcomes",
-        primary_keys=["nct_id", "outcome_type", "measure"],
-        strategy="delete_insert",
+        "design_outcomes", primary_keys=["nct_id", "outcome_type", "measure"]
     )
 
     # Verify initial load
@@ -174,12 +178,10 @@ def test_full_etl_flow(db_connector: DatabaseConnectorInterface) -> None:
 
     # Load updated data
     db_connector.bulk_load_staging("studies", updated_studies_df)
-    db_connector.execute_merge("studies", primary_keys=["nct_id"], strategy="upsert")
+    db_connector.execute_merge("studies", primary_keys=["nct_id"])
     db_connector.bulk_load_staging("interventions", updated_interventions_df)
     db_connector.execute_merge(
-        "interventions",
-        primary_keys=["nct_id", "intervention_type", "name"],
-        strategy="delete_insert",
+        "interventions", primary_keys=["nct_id", "intervention_type", "name"]
     )
 
     # Verify the update
