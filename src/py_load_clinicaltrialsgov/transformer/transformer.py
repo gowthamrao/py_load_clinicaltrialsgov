@@ -26,8 +26,7 @@ class Transformer:
             not study.protocol_section.identification_module
             or not study.protocol_section.identification_module.get("nctId")
         ):
-            # Cannot process a study without its primary identifier.
-            return
+            raise ValueError("Study is missing required nctId")
 
         nct_id = study.protocol_section.identification_module["nctId"]
 

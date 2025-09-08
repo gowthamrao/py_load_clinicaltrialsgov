@@ -1,4 +1,5 @@
 import pytest
+import time
 from testcontainers.postgres import PostgresContainer
 import pandas as pd
 from py_load_clinicaltrialsgov.connectors.postgres import PostgresConnector
@@ -16,13 +17,8 @@ from typing import Generator
 def postgres_container() -> Generator[PostgresContainer, None, None]:
     # Use a public ECR mirror to avoid Docker Hub rate limits in CI
     image_name = "public.ecr.aws/bitnami/postgresql:latest"
-    # Set Bitnami-specific environment variables for initialization
-    env = {
-        "POSTGRESQL_USERNAME": "test",
-        "POSTGRESQL_PASSWORD": "test",
-        "POSTGRESQL_DATABASE": "test",
-    }
-    with PostgresContainer(image_name, driver=None, env=env) as container:
+    with PostgresContainer(image_name, driver=None) as container:
+        time.sleep(5)
         original_dsn = settings.db.dsn
 
         # The plain DSN for the application

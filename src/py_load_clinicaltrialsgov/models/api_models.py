@@ -47,7 +47,7 @@ class ProtocolSection(BaseModel):
     identification_module: Optional[dict[str, Any]] = Field(
         None, alias="identificationModule"
     )
-    status_module: Optional[dict[str, Any]] = Field(None, alias="statusModule")
+    status_module: dict[str, Any] = Field(..., alias="statusModule")
     sponsor_collaborators_module: Optional[SponsorCollaboratorsModule] = Field(
         None, alias="sponsorCollaboratorsModule"
     )

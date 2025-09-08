@@ -50,6 +50,7 @@ class PostgresConnector(DatabaseConnectorInterface):
             cur.execute(
                 f"TRUNCATE TABLE {', '.join(tables_to_truncate)} RESTART IDENTITY CASCADE"
             )
+        self.conn.commit()
 
     def bulk_load_staging(self, table_name: str, data: pd.DataFrame) -> None:
         """
@@ -75,12 +76,30 @@ class PostgresConnector(DatabaseConnectorInterface):
 
     def execute_merge(self, table_name: str, primary_keys: List[str]) -> None:
         """
-        Merges data from a staging table to a final table using a unified
-        UPSERT (INSERT ... ON CONFLICT) strategy for all tables.
+        Merges data from a staging table to a final table.
+        - For simple parent tables (like 'studies'), it uses UPSERT.
+        - For child tables (like 'conditions', 'interventions'), it uses a
+          "delete then insert" strategy to handle cases where child records
+          are removed in a new data load.
         """
         staging_table_name = f"staging_{table_name}"
+        is_child_table = "nct_id" in primary_keys and len(primary_keys) > 1
 
         with self.conn.cursor() as cur:
+            if is_child_table:
+                # "Delete then insert" for child tables
+                # Get the parent IDs (nct_id) from the staging table
+                cur.execute(f"SELECT DISTINCT nct_id FROM {staging_table_name}")
+                parent_ids = [row[0] for row in cur.fetchall()]
+
+                if parent_ids:
+                    # Delete all existing child records for these parent IDs
+                    cur.execute(
+                        f"DELETE FROM {table_name} WHERE nct_id = ANY(%s)",
+                        (parent_ids,),
+                    )
+
+            # Now, perform the insert/upsert
             cur.execute(
                 "SELECT column_name FROM information_schema.columns "
                 "WHERE table_name = %s AND column_name != 'id'",
@@ -95,7 +114,8 @@ class PostgresConnector(DatabaseConnectorInterface):
             conflict_target = ", ".join(f'"{pk}"' for pk in primary_keys)
             update_cols = [col for col in columns if col not in primary_keys]
 
-            if not update_cols:
+            if not update_cols or is_child_table:
+                # If it's a child table, we've already deleted, so we just insert.
                 on_conflict_action = "DO NOTHING"
             else:
                 update_assignments = [
