@@ -3,6 +3,9 @@ from typing_extensions import Annotated
 import structlog
 import logging
 import sys
+import json
+from alembic.config import Config
+from alembic import command
 
 from py_load_clinicaltrialsgov.connectors.postgres import PostgresConnector
 from py_load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
@@ -46,7 +49,7 @@ def run(
     connector_name: Annotated[
         str, typer.Option(help="Name of the database connector to use.")
     ] = "postgres",
-):
+) -> None:
     """
     Run the ETL process.
     """
@@ -59,15 +62,47 @@ def run(
     )
     orchestrator.run_etl(load_type=load_type)
 
-from alembic.config import Config
-from alembic import command
 
+@app.command()
+def init_db(
+    connector_name: Annotated[
+        str, typer.Option(help="Name of the database connector to use.")
+    ] = "postgres",
+    force: Annotated[bool, typer.Option(help="Bypass confirmation prompt.")] = False,
+) -> None:
+    """
+    Initialize the database by dropping all existing tables and running migrations.
+    Warning: This is a destructive operation.
+    """
+    if not force:
+        confirm = typer.confirm(
+            "Are you sure you want to drop all tables and re-initialize the database? "
+            "This action is irreversible."
+        )
+        if not confirm:
+            logger.warning("database_initialization_aborted")
+            raise typer.Abort()
+
+    logger.info("initializing_database")
+    try:
+        connector = get_connector(connector_name)
+        logger.info("dropping_existing_tables")
+        connector.initialize_schema()
+        logger.info("tables_dropped_successfully")
+
+        # After clearing the schema, run migrations to create it again
+        migrate_db(revision="head")
+
+    except Exception as e:
+        logger.error("failed_to_initialize_database", error=str(e), exc_info=True)
+        typer.echo(f"Error: Could not initialize database. {e}", err=True)
+        raise typer.Exit(code=1)
 
 
 @app.command()
 def migrate_db(
     revision: Annotated[str, typer.Option(help="The revision to upgrade to.")] = "head"
-):
+) -> None:
     """Apply database migrations."""
     logger.info("running_database_migrations", revision=revision)
     alembic_cfg = Config("alembic.ini")
@@ -75,12 +110,12 @@ def migrate_db(
     logger.info("database_migrations_completed")
 
 
-import json
-
 @app.command()
 def status(
-    connector_name: Annotated[str, typer.Option(help="Name of the database connector to use.")] = "postgres",
-):
+    connector_name: Annotated[
+        str, typer.Option(help="Name of the database connector to use.")
+    ] = "postgres",
+) -> None:
     """
     Check the status of the last ETL run.
     """

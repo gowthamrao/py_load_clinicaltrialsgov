@@ -1,5 +1,5 @@
 import structlog
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Literal
 
 from py_load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
 from py_load_clinicaltrialsgov.extractor.api_client import APIClient
@@ -27,12 +27,12 @@ class Orchestrator:
         connector: DatabaseConnectorInterface,
         api_client: APIClient,
         transformer: Transformer,
-    ):
+    ) -> None:
         self.connector = connector
         self.api_client = api_client
         self.transformer = transformer
 
-    def run_etl(self, load_type: str):
+    def run_etl(self, load_type: str) -> None:
         """
         Executes the full ETL pipeline.
         """
@@ -101,7 +101,15 @@ class Orchestrator:
                         continue
 
                     self.connector.bulk_load_staging(table_name, df)
-                    self.connector.execute_merge(table_name, primary_keys)
+
+                    # Parent tables use 'upsert', child tables use 'delete_insert'
+                    # to ensure the full set of child records is replaced.
+                    is_parent_table = primary_keys == ["nct_id"]
+                    strategy: Literal[
+                        "upsert", "delete_insert"
+                    ] = "upsert" if is_parent_table else "delete_insert"
+
+                    self.connector.execute_merge(table_name, primary_keys, strategy)
 
             metrics: Dict[str, Any] = {"records_processed": record_count}
             self.connector.record_load_history("SUCCESS", metrics)

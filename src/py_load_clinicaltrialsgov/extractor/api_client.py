@@ -13,10 +13,10 @@ class APIClient:
     A client for interacting with the ClinicalTrials.gov V2 API.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.client = httpx.Client(
             timeout=settings.api.timeout,
-            limits=httpx.Limits(max_connections=5, max_keepalive_connections=5)
+            limits=httpx.Limits(max_connections=5, max_keepalive_connections=5),
         )
 
     @retry(
@@ -59,5 +59,5 @@ class APIClient:
             if not page_token:
                 break
 
-    def close(self):
+    def close(self) -> None:
         self.client.close()

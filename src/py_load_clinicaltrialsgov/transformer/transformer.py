@@ -1,7 +1,6 @@
 import pandas as pd
-from typing import Dict, List, Tuple
+from typing import Dict, List, Any
 from py_load_clinicaltrialsgov.models.api_models import Study
-import json
 from datetime import datetime, UTC
 
 class Transformer:
@@ -9,13 +8,13 @@ class Transformer:
     Transforms raw study data from the API into normalized dataframes.
     """
 
-    def __init__(self):
-        self.raw_studies = []
-        self.studies = []
-        self.sponsors = []
-        self.conditions = []
-        self.interventions = []
-        self.design_outcomes = []
+    def __init__(self) -> None:
+        self.raw_studies: List[Dict[str, Any]] = []
+        self.studies: List[Dict[str, Any]] = []
+        self.sponsors: List[Dict[str, Any]] = []
+        self.conditions: List[Dict[str, Any]] = []
+        self.interventions: List[Dict[str, Any]] = []
+        self.design_outcomes: List[Dict[str, Any]] = []
 
     def transform_study(self, study: Study) -> None:
         """
@@ -35,7 +34,7 @@ class Transformer:
         self._transform_outcomes(nct_id, study)
 
 
-    def _transform_raw_studies(self, nct_id: str, study: Study):
+    def _transform_raw_studies(self, nct_id: str, study: Study) -> None:
         last_updated_str = None
         if study.protocol_section.status_module:
             last_updated_str = study.protocol_section.status_module.get(
@@ -52,81 +51,119 @@ class Transformer:
             }
         )
 
-    def _transform_studies_table(self, nct_id: str, study: Study):
+    def _transform_studies_table(self, nct_id: str, study: Study) -> None:
         start_date_str = None
         completion_date_str = None
         if study.protocol_section.status_module:
-            start_date_str = study.protocol_section.status_module.get("startDateStruct", {}).get("date")
-            completion_date_str = study.protocol_section.status_module.get("primaryCompletionDateStruct", {}).get("date")
+            start_date_str = study.protocol_section.status_module.get(
+                "startDateStruct", {}
+            ).get("date")
+            completion_date_str = study.protocol_section.status_module.get(
+                "primaryCompletionDateStruct", {}
+            ).get("date")
 
-        self.studies.append({
-            "nct_id": nct_id,
-            "brief_title": study.protocol_section.identification_module.get("briefTitle"),
-            "official_title": study.protocol_section.identification_module.get("officialTitle"),
-            "overall_status": study.protocol_section.status_module.get("overallStatus") if study.protocol_section.status_module else None,
-            "start_date": self._normalize_date(start_date_str),
-            "start_date_str": start_date_str,
-            "primary_completion_date": self._normalize_date(completion_date_str),
-            "primary_completion_date_str": completion_date_str,
-            "study_type": study.protocol_section.design_module.get("studyType") if study.protocol_section.design_module else None,
-            "brief_summary": study.protocol_section.description_module.get("briefSummary") if study.protocol_section.description_module else None,
-        })
+        study_type = None
+        if study.protocol_section.design_module:
+            study_type = study.protocol_section.design_module.get("studyType")
 
-    def _transform_sponsors(self, nct_id: str, study: Study):
+        brief_summary = None
+        if study.protocol_section.description_module:
+            brief_summary = study.protocol_section.description_module.get(
+                "briefSummary"
+            )
+
+        self.studies.append(
+            {
+                "nct_id": nct_id,
+                "brief_title": study.protocol_section.identification_module.get(
+                    "briefTitle"
+                ),
+                "official_title": study.protocol_section.identification_module.get(
+                    "officialTitle"
+                ),
+                "overall_status": study.protocol_section.status_module.get(
+                    "overallStatus"
+                )
+                if study.protocol_section.status_module
+                else None,
+                "start_date": self._normalize_date(start_date_str),
+                "start_date_str": start_date_str,
+                "primary_completion_date": self._normalize_date(completion_date_str),
+                "primary_completion_date_str": completion_date_str,
+                "study_type": study_type,
+                "brief_summary": brief_summary,
+            }
+        )
+
+    def _transform_sponsors(self, nct_id: str, study: Study) -> None:
         if study.protocol_section.sponsor_collaborators_module:
-            lead_sponsor = study.protocol_section.sponsor_collaborators_module.get("leadSponsor")
+            lead_sponsor = study.protocol_section.sponsor_collaborators_module.get(
+                "leadSponsor"
+            )
             if lead_sponsor:
-                self.sponsors.append({
-                    "nct_id": nct_id,
-                    "agency_class": lead_sponsor.get("class"),
-                    "name": lead_sponsor.get("name"),
-                    "is_lead": True,
-                })
+                self.sponsors.append(
+                    {
+                        "nct_id": nct_id,
+                        "agency_class": lead_sponsor.get("class"),
+                        "name": lead_sponsor.get("name"),
+                        "is_lead": True,
+                    }
+                )
 
-    def _transform_conditions(self, nct_id: str, study: Study):
+    def _transform_conditions(self, nct_id: str, study: Study) -> None:
         if study.protocol_section.conditions_module:
-            conditions = study.protocol_section.conditions_module.get("conditions", [])
+            conditions = study.protocol_section.conditions_module.get(
+                "conditions", []
+            )
             for condition in conditions:
-                self.conditions.append({
-                    "nct_id": nct_id,
-                    "name": condition,
-                })
+                self.conditions.append(
+                    {"nct_id": nct_id, "name": condition}
+                )
 
-    def _transform_interventions(self, nct_id: str, study: Study):
-        if not study.protocol_section.arms_interventions_module or not study.protocol_section.arms_interventions_module.interventions:
+    def _transform_interventions(self, nct_id: str, study: Study) -> None:
+        if (
+            not study.protocol_section.arms_interventions_module
+            or not study.protocol_section.arms_interventions_module.interventions
+        ):
             return
         for intervention in study.protocol_section.arms_interventions_module.interventions:
-            self.interventions.append({
-                "nct_id": nct_id,
-                "intervention_type": intervention.type,
-                "name": intervention.name,
-                "description": intervention.description
-            })
+            self.interventions.append(
+                {
+                    "nct_id": nct_id,
+                    "intervention_type": intervention.type,
+                    "name": intervention.name,
+                    "description": intervention.description,
+                }
+            )
 
-    def _transform_outcomes(self, nct_id: str, study: Study):
+    def _transform_outcomes(self, nct_id: str, study: Study) -> None:
         if not study.protocol_section.outcomes_module:
             return
 
         outcomes_module = study.protocol_section.outcomes_module
         if outcomes_module.primary_outcomes:
             for outcome in outcomes_module.primary_outcomes:
-                self.design_outcomes.append({
-                    "nct_id": nct_id,
-                    "outcome_type": "PRIMARY",
-                    "measure": outcome.measure,
-                    "time_frame": outcome.time_frame,
-                    "description": outcome.description
-                })
+                self.design_outcomes.append(
+                    {
+                        "nct_id": nct_id,
+                        "outcome_type": "PRIMARY",
+                        "measure": outcome.measure,
+                        "time_frame": outcome.time_frame,
+                        "description": outcome.description,
+                    }
+                )
 
         if outcomes_module.secondary_outcomes:
             for outcome in outcomes_module.secondary_outcomes:
-                self.design_outcomes.append({
-                    "nct_id": nct_id,
-                    "outcome_type": "SECONDARY",
-                    "measure": outcome.measure,
-                    "time_frame": outcome.time_frame,
-                    "description": outcome.description
-                })
+                self.design_outcomes.append(
+                    {
+                        "nct_id": nct_id,
+                        "outcome_type": "SECONDARY",
+                        "measure": outcome.measure,
+                        "time_frame": outcome.time_frame,
+                        "description": outcome.description,
+                    }
+                )
 
     def _normalize_date(self, date_str: str | None) -> datetime | None:
         """
