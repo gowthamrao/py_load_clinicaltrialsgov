@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS raw_studies (
     nct_id VARCHAR(255) PRIMARY KEY,
     last_updated_api TIMESTAMP,
+    last_updated_api_str VARCHAR(255),
     ingestion_timestamp TIMESTAMP,
     payload JSONB
 );
@@ -74,6 +75,7 @@ CREATE TABLE IF NOT EXISTS load_history (
 CREATE UNLOGGED TABLE IF NOT EXISTS staging_raw_studies (
     nct_id VARCHAR(255),
     last_updated_api TIMESTAMP,
+    last_updated_api_str VARCHAR(255),
     ingestion_timestamp TIMESTAMP,
     payload JSONB
 );
