@@ -1,7 +1,5 @@
-import json
 import pytest
 import pandas as pd
-from pathlib import Path
 from py_load_clinicaltrialsgov.models.api_models import Study
 from py_load_clinicaltrialsgov.transformer.transformer import Transformer
 
@@ -80,7 +78,7 @@ def transformer() -> Transformer:
 
 def test_transform_single_study_smoke(
     transformer: Transformer, sample_study: Study
-):
+) -> None:
     """Smoke test to ensure transform_study runs without errors."""
     try:
         transformer.transform_study(sample_study, SAMPLE_STUDY_PAYLOAD)
@@ -88,7 +86,7 @@ def test_transform_single_study_smoke(
         pytest.fail(f"transform_study raised an exception: {e}")
 
 
-def test_get_dataframes(transformer: Transformer, sample_study: Study):
+def test_get_dataframes(transformer: Transformer, sample_study: Study) -> None:
     """Test that get_dataframes returns the correct structure."""
     transformer.transform_study(sample_study, SAMPLE_STUDY_PAYLOAD)
     dfs = transformer.get_dataframes()
@@ -105,7 +103,7 @@ def test_get_dataframes(transformer: Transformer, sample_study: Study):
     assert all(not df.empty for df in dfs.values())
 
 
-def test_studies_table_content(transformer: Transformer, sample_study: Study):
+def test_studies_table_content(transformer: Transformer, sample_study: Study) -> None:
     """Verify the content of the 'studies' dataframe."""
     transformer.transform_study(sample_study, SAMPLE_STUDY_PAYLOAD)
     df = transformer.get_dataframes()["studies"]
@@ -121,23 +119,23 @@ def test_studies_table_content(transformer: Transformer, sample_study: Study):
     assert study_row["start_date_str"] == "1995-01-01"
 
 
-def test_sponsors_table_content(transformer: Transformer, sample_study: Study):
+def test_sponsors_table_content(transformer: Transformer, sample_study: Study) -> None:
     """Verify the content of the 'sponsors' dataframe, including collaborators."""
     transformer.transform_study(sample_study, SAMPLE_STUDY_PAYLOAD)
     df = transformer.get_dataframes()["sponsors"]
 
     assert df.shape[0] == 3  # 1 lead sponsor + 2 collaborators
 
-    lead_sponsor = df[df["is_lead"] == True]
+    lead_sponsor = df[df["is_lead"]]
     assert lead_sponsor.shape[0] == 1
     assert lead_sponsor.iloc[0]["name"] == "National Cancer Institute"
     assert lead_sponsor.iloc[0]["agency_class"] == "NIH"
 
-    collaborators = df[df["is_lead"] == False]
+    collaborators = df[~df["is_lead"]]
     assert collaborators.shape[0] == 2
 
 
-def test_child_tables_row_counts(transformer: Transformer, sample_study: Study):
+def test_child_tables_row_counts(transformer: Transformer, sample_study: Study) -> None:
     """Verify row counts for all child tables."""
     transformer.transform_study(sample_study, SAMPLE_STUDY_PAYLOAD)
     dfs = transformer.get_dataframes()
@@ -147,7 +145,7 @@ def test_child_tables_row_counts(transformer: Transformer, sample_study: Study):
     assert dfs["design_outcomes"].shape[0] == 2  # 1 primary + 1 secondary
 
 
-def test_design_outcomes_content(transformer: Transformer, sample_study: Study):
+def test_design_outcomes_content(transformer: Transformer, sample_study: Study) -> None:
     """Verify the content of the 'design_outcomes' table."""
     transformer.transform_study(sample_study, SAMPLE_STUDY_PAYLOAD)
     df = transformer.get_dataframes()["design_outcomes"]
@@ -161,16 +159,22 @@ def test_design_outcomes_content(transformer: Transformer, sample_study: Study):
     assert secondary.iloc[0]["measure"] == "Tumor Response"
 
 
-def test_date_normalization():
+def test_date_normalization() -> None:
     """Test the _normalize_date helper directly."""
     t = Transformer()
-    assert t._normalize_date("2023-10-25").year == 2023
-    assert t._normalize_date("October 2023").month == 10
-    assert t._normalize_date("2023").day == 1
+    date1 = t._normalize_date("2023-10-25")
+    assert date1 is not None
+    assert date1.year == 2023
+    date2 = t._normalize_date("October 2023")
+    assert date2 is not None
+    assert date2.month == 10
+    date3 = t._normalize_date("2023")
+    assert date3 is not None
+    assert date3.day == 1
     assert t._normalize_date(None) is None
     assert t._normalize_date("Invalid Date") is None
 
-def test_clear_function(transformer: Transformer, sample_study: Study):
+def test_clear_function(transformer: Transformer, sample_study: Study) -> None:
     """Test that the clear function resets the internal state."""
     transformer.transform_study(sample_study, SAMPLE_STUDY_PAYLOAD)
     assert not transformer.get_dataframes()["studies"].empty

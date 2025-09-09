@@ -76,6 +76,24 @@ class DesignModule(BaseModel):
     study_type: Optional[str] = Field(None, alias="studyType")
 
 
+class EligibilityModule(BaseModel):
+    sex: Optional[str] = None
+    minimum_age: Optional[str] = Field(None, alias="minimumAge")
+    maximum_age: Optional[str] = Field(None, alias="maximumAge")
+    criteria: Optional[str] = None
+
+
+class Location(BaseModel):
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip: Optional[str] = None
+    country: Optional[str] = None
+
+
+class ContactsLocationsModule(BaseModel):
+    locations: Optional[List[Location]] = None
+
+
 class ProtocolSection(BaseModel):
     identification_module: IdentificationModule = Field(
         ..., alias="identificationModule"
@@ -96,10 +114,10 @@ class ProtocolSection(BaseModel):
         None, alias="armsInterventionsModule"
     )
     outcomes_module: Optional[OutcomesModule] = Field(None, alias="outcomesModule")
-    eligibility_module: Optional[dict[str, Any]] = Field(
+    eligibility_module: Optional[EligibilityModule] = Field(
         None, alias="eligibilityModule"
     )
-    contacts_locations_module: Optional[dict[str, Any]] = Field(
+    contacts_locations_module: Optional[ContactsLocationsModule] = Field(
         None, alias="contactsLocationsModule"
     )
     references_module: Optional[dict[str, Any]] = Field(None, alias="referencesModule")

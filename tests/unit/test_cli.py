@@ -1,9 +1,9 @@
+from typing import Any
 import pytest
 from unittest.mock import MagicMock, patch
 from typer.testing import CliRunner
 
 from py_load_clinicaltrialsgov.cli import app
-from py_load_clinicaltrialsgov.models.api_models import Study
 
 # Create a runner for testing the Typer app
 runner = CliRunner()
@@ -39,7 +39,7 @@ def test_run_command_sends_invalid_study_to_dlq(
     """
     # Arrange
     # This payload is invalid because it's missing the 'identificationModule'
-    invalid_study_payload = {"protocolSection": {"statusModule": {}}}
+    invalid_study_payload: dict[str, Any] = {"protocolSection": {"statusModule": {}}}
 
     # Configure mocks
     mock_api_client.get_all_studies.return_value = iter([invalid_study_payload])
@@ -125,7 +125,7 @@ def test_status_command_failed_with_previous_success(mock_connector: MagicMock) 
         "status": "FAILURE",
         "metrics": {"error": "connection timed out"},
     }
-    successful_record = {
+    successful_record: dict[str, Any] = {
         "load_timestamp": datetime(2023, 1, 1, 12, 0, 0),
         "status": "SUCCESS",
         "metrics": {"records_processed": 100},

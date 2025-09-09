@@ -1,13 +1,12 @@
 import unittest
-from unittest.mock import MagicMock, patch, call
-from pydantic import ValidationError
+from unittest.mock import MagicMock, call
 
 from py_load_clinicaltrialsgov.orchestrator import Orchestrator
 from py_load_clinicaltrialsgov.models.api_models import Study
 
 
 class TestOrchestrator(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.mock_connector = MagicMock()
         self.mock_api_client = MagicMock()
         self.mock_transformer = MagicMock()
@@ -39,7 +38,7 @@ class TestOrchestrator(unittest.TestCase):
             "hasResults": False,
         }
 
-    def test_orchestrator_handles_validation_error_gracefully(self):
+    def test_orchestrator_handles_validation_error_gracefully(self) -> None:
         """
         Verify that the orchestrator can handle a Pydantic validation error.
 

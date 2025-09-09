@@ -116,6 +116,35 @@ def test_full_etl_flow(db_connector: DatabaseConnectorInterface) -> None:
             }
         ]
     )
+    eligibility_df = pd.DataFrame(
+        [
+            {
+                "nct_id": "NCT00000123",
+                "sex": "ALL",
+                "minimum_age": "18 Years",
+                "maximum_age": "65 Years",
+                "criteria": "Some criteria",
+            }
+        ]
+    )
+    locations_df = pd.DataFrame(
+        [
+            {
+                "nct_id": "NCT00000123",
+                "city": "New York",
+                "state": "New York",
+                "zip": "10001",
+                "country": "United States",
+            },
+            {
+                "nct_id": "NCT00000123",
+                "city": "Boston",
+                "state": "Massachusetts",
+                "zip": "02110",
+                "country": "United States",
+            },
+        ]
+    )
 
     # Load initial data
     db_connector.bulk_load_staging("studies", studies_df)
@@ -128,19 +157,41 @@ def test_full_etl_flow(db_connector: DatabaseConnectorInterface) -> None:
     db_connector.execute_merge(
         "design_outcomes", primary_keys=["nct_id", "outcome_type", "measure"]
     )
+    db_connector.bulk_load_staging("eligibility_criteria", eligibility_df)
+    db_connector.execute_merge("eligibility_criteria", primary_keys=["nct_id"])
+    db_connector.bulk_load_staging("locations", locations_df)
+    db_connector.execute_merge(
+        "locations", primary_keys=["nct_id", "city", "state", "country"]
+    )
 
     # Verify initial load
     with pg_connector.conn.cursor() as cur:
         cur.execute("SELECT COUNT(*) FROM studies WHERE nct_id = 'NCT00000123'")
-        assert cur.fetchone()[0] == 1
+        result = cur.fetchone()
+        assert result is not None
+        assert result[0] == 1
         cur.execute("SELECT COUNT(*) FROM interventions WHERE nct_id = 'NCT00000123'")
-        assert cur.fetchone()[0] == 2
+        result = cur.fetchone()
+        assert result is not None
+        assert result[0] == 2
         cur.execute("SELECT COUNT(*) FROM design_outcomes WHERE nct_id = 'NCT00000123'")
-        assert cur.fetchone()[0] == 1
+        result = cur.fetchone()
+        assert result is not None
+        assert result[0] == 1
         cur.execute(
             "SELECT name FROM interventions WHERE nct_id = 'NCT00000123' AND name = 'Aspirin'"
         )
         assert cur.fetchone() is not None
+        cur.execute(
+            "SELECT COUNT(*) FROM eligibility_criteria WHERE nct_id = 'NCT00000123'"
+        )
+        result = cur.fetchone()
+        assert result is not None
+        assert result[0] == 1
+        cur.execute("SELECT COUNT(*) FROM locations WHERE nct_id = 'NCT00000123'")
+        result = cur.fetchone()
+        assert result is not None
+        assert result[0] == 2
 
     # 2. Second Load (Delta update for the same study)
     # The title is updated, and the interventions have changed completely.
@@ -171,6 +222,35 @@ def test_full_etl_flow(db_connector: DatabaseConnectorInterface) -> None:
             }
         ]
     )
+    updated_eligibility_df = pd.DataFrame(
+        [
+            {
+                "nct_id": "NCT00000123",
+                "sex": "FEMALE",
+                "minimum_age": "21 Years",
+                "maximum_age": "65 Years",
+                "criteria": "Updated criteria",
+            }
+        ]
+    )
+    updated_locations_df = pd.DataFrame(
+        [
+            {
+                "nct_id": "NCT00000123",
+                "city": "New York",
+                "state": "New York",
+                "zip": "10002",  # Changed zip
+                "country": "United States",
+            },
+            {
+                "nct_id": "NCT00000123",
+                "city": "Chicago",  # New city
+                "state": "Illinois",
+                "zip": "60601",
+                "country": "United States",
+            },
+        ]
+    )
 
     # Load updated data
     db_connector.bulk_load_staging("studies", updated_studies_df)
@@ -179,21 +259,55 @@ def test_full_etl_flow(db_connector: DatabaseConnectorInterface) -> None:
     db_connector.execute_merge(
         "interventions", primary_keys=["nct_id", "intervention_type", "name"]
     )
+    db_connector.bulk_load_staging("eligibility_criteria", updated_eligibility_df)
+    db_connector.execute_merge("eligibility_criteria", primary_keys=["nct_id"])
+    db_connector.bulk_load_staging("locations", updated_locations_df)
+    db_connector.execute_merge(
+        "locations", primary_keys=["nct_id", "city", "state", "country"]
+    )
 
     # Verify the update
     with pg_connector.conn.cursor() as cur:
         # Check that the study was updated (UPSERT)
         cur.execute("SELECT brief_title FROM studies WHERE nct_id = 'NCT00000123'")
-        assert cur.fetchone()[0] == "Updated Title"
+        result = cur.fetchone()
+        assert result is not None
+        assert result[0] == "Updated Title"
         cur.execute("SELECT COUNT(*) FROM studies WHERE nct_id = 'NCT00000123'")
-        assert cur.fetchone()[0] == 1
+        result = cur.fetchone()
+        assert result is not None
+        assert result[0] == 1
 
         # Check that interventions were replaced (DELETE then INSERT)
         cur.execute("SELECT COUNT(*) FROM interventions WHERE nct_id = 'NCT00000123'")
-        assert cur.fetchone()[0] == 1
+        result = cur.fetchone()
+        assert result is not None
+        assert result[0] == 1
         cur.execute("SELECT name FROM interventions WHERE nct_id = 'NCT00000123'")
-        assert cur.fetchone()[0] == "Stent"
+        result = cur.fetchone()
+        assert result is not None
+        assert result[0] == "Stent"
         cur.execute(
             "SELECT name FROM interventions WHERE nct_id = 'NCT00000123' AND name = 'Aspirin'"
         )
         assert cur.fetchone() is None  # The old intervention should be gone
+
+        # Check that eligibility was updated (UPSERT)
+        cur.execute("SELECT sex FROM eligibility_criteria WHERE nct_id = 'NCT00000123'")
+        result = cur.fetchone()
+        assert result is not None
+        assert result[0] == "FEMALE"
+
+        # Check that locations were replaced (DELETE then INSERT)
+        cur.execute("SELECT COUNT(*) FROM locations WHERE nct_id = 'NCT00000123'")
+        result = cur.fetchone()
+        assert result is not None
+        assert result[0] == 2
+        cur.execute(
+            "SELECT city FROM locations WHERE nct_id = 'NCT00000123' AND city = 'Chicago'"
+        )
+        assert cur.fetchone() is not None
+        cur.execute(
+            "SELECT city FROM locations WHERE nct_id = 'NCT00000123' AND city = 'Boston'"
+        )
+        assert cur.fetchone() is None  # The old location should be gone

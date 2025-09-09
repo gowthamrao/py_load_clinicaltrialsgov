@@ -4,7 +4,7 @@ from py_load_clinicaltrialsgov.transformer.transformer import Transformer
 from py_load_clinicaltrialsgov.models.api_models import Study
 
 
-def test_transform_study():
+def test_transform_study() -> None:
     # Create a mock study object
     mock_study_data = {
         "protocolSection": {
@@ -75,12 +75,12 @@ def test_transform_study():
         ("", None),
     ],
 )
-def test_normalize_date(date_str, expected_date):
+def test_normalize_date(date_str: str | None, expected_date: datetime | None) -> None:
     transformer = Transformer()
     assert transformer._normalize_date(date_str) == expected_date
 
 
-def test_transform_study_with_collaborators():
+def test_transform_study_with_collaborators() -> None:
     mock_study_data = {
         "protocolSection": {
             "identificationModule": {"nctId": "NCT54321"},
@@ -107,11 +107,11 @@ def test_transform_study_with_collaborators():
     sponsors_df = dataframes["sponsors"]
     assert len(sponsors_df) == 3
 
-    lead_sponsor = sponsors_df[sponsors_df["is_lead"] == True]
+    lead_sponsor = sponsors_df[sponsors_df["is_lead"]]
     assert len(lead_sponsor) == 1
     assert lead_sponsor.iloc[0]["name"] == "Lead Sponsor Inc."
 
-    collaborators = sponsors_df[sponsors_df["is_lead"] == False]
+    collaborators = sponsors_df[~sponsors_df["is_lead"]]
     assert len(collaborators) == 2
     assert "Collaborator 1" in collaborators["name"].values
     assert "Collaborator 2" in collaborators["name"].values

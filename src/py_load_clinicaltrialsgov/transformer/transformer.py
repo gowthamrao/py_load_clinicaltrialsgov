@@ -21,6 +21,8 @@ class Transformer:
         self.conditions: List[Dict[str, Any]] = []
         self.interventions: List[Dict[str, Any]] = []
         self.design_outcomes: List[Dict[str, Any]] = []
+        self.eligibility_criteria: List[Dict[str, Any]] = []
+        self.locations: List[Dict[str, Any]] = []
 
     def transform_study(self, study: Study, raw_study_payload: Dict[str, Any]) -> None:
         """
@@ -41,6 +43,8 @@ class Transformer:
         self._transform_conditions(nct_id, study)
         self._transform_interventions(nct_id, study)
         self._transform_outcomes(nct_id, study)
+        self._transform_eligibility(nct_id, study)
+        self._transform_locations(nct_id, study)
 
     def _transform_raw_studies(
         self, nct_id: str, raw_payload: Dict[str, Any], study: Study
@@ -178,6 +182,37 @@ class Transformer:
                     }
                 )
 
+    def _transform_eligibility(self, nct_id: str, study: Study) -> None:
+        module = study.protocol_section.eligibility_module
+        if not module:
+            return
+
+        self.eligibility_criteria.append(
+            {
+                "nct_id": nct_id,
+                "sex": module.sex,
+                "minimum_age": module.minimum_age,
+                "maximum_age": module.maximum_age,
+                "criteria": module.criteria,
+            }
+        )
+
+    def _transform_locations(self, nct_id: str, study: Study) -> None:
+        module = study.protocol_section.contacts_locations_module
+        if not module or not module.locations:
+            return
+
+        for location in module.locations:
+            self.locations.append(
+                {
+                    "nct_id": nct_id,
+                    "city": location.city,
+                    "state": location.state,
+                    "zip": location.zip,
+                    "country": location.country,
+                }
+            )
+
     def _normalize_date(self, date_str: str | None) -> datetime | None:
         if not date_str:
             return None
@@ -195,6 +230,8 @@ class Transformer:
             "conditions": pd.DataFrame(self.conditions),
             "interventions": pd.DataFrame(self.interventions),
             "design_outcomes": pd.DataFrame(self.design_outcomes),
+            "eligibility_criteria": pd.DataFrame(self.eligibility_criteria),
+            "locations": pd.DataFrame(self.locations),
         }
         return {name: df for name, df in dataframes.items() if not df.empty}
 
@@ -205,3 +242,5 @@ class Transformer:
         self.conditions.clear()
         self.interventions.clear()
         self.design_outcomes.clear()
+        self.eligibility_criteria.clear()
+        self.locations.clear()

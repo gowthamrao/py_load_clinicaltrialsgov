@@ -1,5 +1,4 @@
 import pytest
-import json
 from unittest.mock import MagicMock, create_autospec
 
 from py_load_clinicaltrialsgov.connectors.postgres import PostgresConnector
@@ -8,7 +7,6 @@ from py_load_clinicaltrialsgov.transformer.transformer import Transformer
 from py_load_clinicaltrialsgov.orchestrator import Orchestrator
 
 # Import fixtures from the other test file
-from .test_full_etl import postgres_container, db_connector
 
 
 # A valid study record that should process successfully
@@ -95,22 +93,34 @@ def test_orchestrator_full_run(
     with db_connector.conn.cursor() as cur:
         # 1. Check for the successfully processed study
         cur.execute("SELECT COUNT(*) FROM studies")
-        assert cur.fetchone()[0] == 1
+        result = cur.fetchone()
+        assert result is not None
+        assert result[0] == 1
         cur.execute("SELECT brief_title FROM studies WHERE nct_id = 'NCT000001'")
-        assert cur.fetchone()[0] == "Valid Study"
+        result = cur.fetchone()
+        assert result is not None
+        assert result[0] == "Valid Study"
         cur.execute("SELECT COUNT(*) FROM conditions WHERE nct_id = 'NCT000001'")
-        assert cur.fetchone()[0] == 1
+        result = cur.fetchone()
+        assert result is not None
+        assert result[0] == 1
 
         # 2. Check that the raw payload for the SUCCESSFUL study was stored
         cur.execute("SELECT COUNT(*) FROM raw_studies")
-        assert cur.fetchone()[0] == 1
+        result = cur.fetchone()
+        assert result is not None
+        assert result[0] == 1
         cur.execute("SELECT payload FROM raw_studies WHERE nct_id = 'NCT000001'")
-        raw_payload = cur.fetchone()[0]
+        result = cur.fetchone()
+        assert result is not None
+        raw_payload = result[0]
         assert raw_payload["protocolSection"]["identificationModule"]["nctId"] == "NCT000001"
 
         # 3. Check for the quarantined records in the dead-letter queue
         cur.execute("SELECT COUNT(*) FROM dead_letter_queue")
-        assert cur.fetchone()[0] == 2
+        result = cur.fetchone()
+        assert result is not None
+        assert result[0] == 2
 
         # 4. Check the record that failed due to missing NCT ID
         cur.execute("SELECT nct_id, error_message FROM dead_letter_queue WHERE nct_id IS NULL")
@@ -130,7 +140,8 @@ def test_orchestrator_full_run(
         history = cur.fetchone()
         assert history is not None
         # Should be 1 record processed successfully, not 3
-        assert history[1]["records_processed"] == 1
-        assert history[1]["records_loaded_per_table"]["studies"] == 1
-        assert history[1]["records_loaded_per_table"]["raw_studies"] == 1
-        assert history[1]["records_loaded_per_table"]["conditions"] == 1
+        metrics = history[1]
+        assert metrics["records_processed"] == 1
+        assert metrics["records_loaded_per_table"]["studies"] == 1
+        assert metrics["records_loaded_per_table"]["raw_studies"] == 1
+        assert metrics["records_loaded_per_table"]["conditions"] == 1

@@ -1,3 +1,4 @@
+from typing import Any
 import pytest
 from pydantic import ValidationError
 
@@ -8,46 +9,46 @@ from py_load_clinicaltrialsgov.models.api_models import (
 )
 
 
-def test_description_module_valid():
+def test_description_module_valid() -> None:
     """Tests that a valid DescriptionModule is parsed correctly."""
-    data = {"briefSummary": "This is a test summary."}
+    data: dict[str, Any] = {"briefSummary": "This is a test summary."}
     module = DescriptionModule.model_validate(data)
     assert module.brief_summary == "This is a test summary."
 
 
-def test_description_module_empty():
+def test_description_module_empty() -> None:
     """Tests that an empty DescriptionModule is parsed correctly."""
-    data = {}
+    data: dict[str, Any] = {}
     module = DescriptionModule.model_validate(data)
     assert module.brief_summary is None
 
 
-def test_conditions_module_valid():
+def test_conditions_module_valid() -> None:
     """Tests that a valid ConditionsModule is parsed correctly."""
-    data = {"conditions": ["Cancer", "Diabetes"]}
+    data: dict[str, Any] = {"conditions": ["Cancer", "Diabetes"]}
     module = ConditionsModule.model_validate(data)
     assert module.conditions == ["Cancer", "Diabetes"]
 
 
-def test_conditions_module_empty_list():
+def test_conditions_module_empty_list() -> None:
     """Tests that a ConditionsModule with an empty list is parsed correctly."""
-    data = {"conditions": []}
+    data: dict[str, Any] = {"conditions": []}
     module = ConditionsModule.model_validate(data)
     assert module.conditions == []
 
 
-def test_conditions_module_null_conditions():
+def test_conditions_module_null_conditions() -> None:
     """Tests that a ConditionsModule with null conditions is parsed correctly."""
-    data = {"conditions": None}
+    data: dict[str, Any] = {"conditions": None}
     module = ConditionsModule.model_validate(data)
     assert module.conditions is None
 
 
-def test_protocol_section_with_new_models():
+def test_protocol_section_with_new_models() -> None:
     """
     Tests that the ProtocolSection correctly uses the new, typed models.
     """
-    data = {
+    data: dict[str, Any] = {
         "identificationModule": {"nctId": "NCT123"},
         "statusModule": {"overallStatus": "COMPLETED"},
         "descriptionModule": {"briefSummary": "A valid summary."},
@@ -60,7 +61,7 @@ def test_protocol_section_with_new_models():
     assert protocol.conditions_module.conditions == ["Condition 1"]
 
 
-def test_protocol_section_validation_error():
+def test_protocol_section_validation_error() -> None:
     """
     Tests that a validation error is raised for invalid data in the new models.
     """

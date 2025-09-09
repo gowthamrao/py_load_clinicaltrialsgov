@@ -25,6 +25,8 @@ class Orchestrator:
         "conditions": ["nct_id", "name"],
         "interventions": ["nct_id", "intervention_type", "name"],
         "design_outcomes": ["nct_id", "outcome_type", "measure"],
+        "eligibility_criteria": ["nct_id"],
+        "locations": ["nct_id", "city", "state", "country"],
     }
 
     def __init__(

@@ -58,6 +58,25 @@ CREATE TABLE IF NOT EXISTS design_outcomes (
 );
 CREATE INDEX IF NOT EXISTS idx_design_outcomes_nct_id ON design_outcomes(nct_id);
 
+CREATE TABLE IF NOT EXISTS eligibility_criteria (
+    nct_id VARCHAR(255) PRIMARY KEY,
+    sex VARCHAR(255),
+    minimum_age VARCHAR(255),
+    maximum_age VARCHAR(255),
+    criteria TEXT
+);
+
+CREATE TABLE IF NOT EXISTS locations (
+    id SERIAL PRIMARY KEY,
+    nct_id VARCHAR(255) NOT NULL,
+    city VARCHAR(255),
+    state VARCHAR(255),
+    zip VARCHAR(255),
+    country VARCHAR(255),
+    CONSTRAINT uq_locations_natural_key UNIQUE (nct_id, city, state, country)
+);
+CREATE INDEX IF NOT EXISTS idx_locations_nct_id ON locations(nct_id);
+
 
 CREATE TABLE IF NOT EXISTS dead_letter_queue (
     id SERIAL PRIMARY KEY,
@@ -122,4 +141,20 @@ CREATE UNLOGGED TABLE IF NOT EXISTS staging_design_outcomes (
     measure TEXT,
     time_frame TEXT,
     description TEXT
+);
+
+CREATE UNLOGGED TABLE IF NOT EXISTS staging_eligibility_criteria (
+    nct_id VARCHAR(255),
+    sex VARCHAR(255),
+    minimum_age VARCHAR(255),
+    maximum_age VARCHAR(255),
+    criteria TEXT
+);
+
+CREATE UNLOGGED TABLE IF NOT EXISTS staging_locations (
+    nct_id VARCHAR(255),
+    city VARCHAR(255),
+    state VARCHAR(255),
+    zip VARCHAR(255),
+    country VARCHAR(255)
 );
