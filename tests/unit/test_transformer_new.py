@@ -1,9 +1,7 @@
-import json
 import pytest
 import pandas as pd
-from pathlib import Path
-from py_load_clinicaltrialsgov.models.api_models import Study
-from py_load_clinicaltrialsgov.transformer.transformer import Transformer
+from load_clinicaltrialsgov.models.api_models import Study
+from load_clinicaltrialsgov.transformer.transformer import Transformer
 
 # It's good practice to have test assets in a separate folder
 # For this exercise, we'll define it in-line.
@@ -128,12 +126,12 @@ def test_sponsors_table_content(transformer: Transformer, sample_study: Study):
 
     assert df.shape[0] == 3  # 1 lead sponsor + 2 collaborators
 
-    lead_sponsor = df[df["is_lead"] == True]
+    lead_sponsor = df[df["is_lead"]]
     assert lead_sponsor.shape[0] == 1
     assert lead_sponsor.iloc[0]["name"] == "National Cancer Institute"
     assert lead_sponsor.iloc[0]["agency_class"] == "NIH"
 
-    collaborators = df[df["is_lead"] == False]
+    collaborators = df[~df["is_lead"]]
     assert collaborators.shape[0] == 2
 
 

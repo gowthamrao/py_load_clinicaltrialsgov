@@ -8,7 +8,7 @@ This document provides a detailed comparison of the Functional Requirements Docu
 *   **Status:** Met
 *   **Analysis:** The package uses an Abstract Base Class, `DatabaseConnectorInterface`, to define a contract for database loaders. The `Orchestrator` is initialized with a concrete implementation of this interface (e.g., `PostgresConnector`), allowing different database backends to be used interchangeably. This is a clear implementation of the Strategy Pattern.
 
-*   **Code Example (`src/py_load_clinicaltrialsgov/cli.py`):**
+*   **Code Example (`src/load_clinicaltrialsgov/cli.py`):**
     ```python
     def get_connector(name: str) -> DatabaseConnectorInterface:
         if name.lower() == "postgres":
@@ -41,10 +41,10 @@ This document provides a detailed comparison of the Functional Requirements Docu
 *   **Status:** Met
 *   **Analysis:** The project uses Pydantic V2 for data validation. Raw JSON dictionaries from the API are parsed into Pydantic models within the orchestrator, ensuring data integrity before transformation.
 
-*   **Code Example (`src/py_load_clinicaltrialsgov/orchestrator.py`):**
+*   **Code Example (`src/load_clinicaltrialsgov/orchestrator.py`):**
     ```python
     from pydantic import ValidationError
-    from py_load_clinicaltrialsgov.models.api_models import Study
+    from load_clinicaltrialsgov.models.api_models import Study
 
     # ...
                 for study_dict in studies_iterator:
@@ -63,7 +63,7 @@ This document provides a detailed comparison of the Functional Requirements Docu
 *   **Status:** Met
 *   **Analysis:** The `DatabaseConnectorInterface` abstract base class is well-defined and includes all methods specified in the FRD, such as `bulk_load_staging`, `execute_merge`, `get_last_successful_load_timestamp`, and `record_load_history`.
 
-*   **Code Example (`src/py_load_clinicaltrialsgov/connectors/interface.py`):**
+*   **Code Example (`src/load_clinicaltrialsgov/connectors/interface.py`):**
     ```python
     from abc import ABC, abstractmethod
     import pandas as pd
@@ -88,7 +88,7 @@ This document provides a detailed comparison of the Functional Requirements Docu
 *   **Status:** Met
 *   **Analysis:** The `APIClient` correctly uses `httpx` for connection pooling, transparently handles pagination via the `nextPageToken`, and leverages the `tenacity` library to implement a robust retry mechanism with exponential backoff for transient HTTP errors (429, 5xx) and timeouts.
 
-*   **Code Example (`src/py_load_clinicaltrialsgov/extractor/api_client.py`):**
+*   **Code Example (`src/load_clinicaltrialsgov/extractor/api_client.py`):**
     ```python
     import httpx
     from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
@@ -124,7 +124,7 @@ This document provides a detailed comparison of the Functional Requirements Docu
 *   **Status:** Met
 *   **Analysis:** The `Orchestrator` retrieves the high-water mark (`updated_since`) from the database and passes it to the `APIClient`. The client then correctly formats this timestamp into an API filter query to fetch only records modified since the last successful run.
 
-*   **Code Example (`src/py_load_clinicaltrialsgov/orchestrator.py`):**
+*   **Code Example (`src/load_clinicaltrialsgov/orchestrator.py`):**
     ```python
     if load_type == "delta":
         updated_since = self.connector.get_last_successful_load_timestamp()
@@ -133,7 +133,7 @@ This document provides a detailed comparison of the Functional Requirements Docu
         updated_since=updated_since
     )
     ```
-*   **Code Example (`src/py_load_clinicaltrialsgov/extractor/api_client.py`):**
+*   **Code Example (`src/load_clinicaltrialsgov/extractor/api_client.py`):**
     ```python
     def get_all_studies(
         self, updated_since: Optional[datetime] = None
@@ -150,7 +150,7 @@ This document provides a detailed comparison of the Functional Requirements Docu
 *   **Status:** Met
 *   **Analysis:** This critical requirement is fully implemented. The `Orchestrator` wraps Pydantic validation in a `try...except` block. If validation fails for a study, the raw payload is passed to the connector's `record_failed_study` method, and processing continues to the next record.
 
-*   **Code Example (`src/py_load_clinicaltrialsgov/orchestrator.py`):**
+*   **Code Example (`src/load_clinicaltrialsgov/orchestrator.py`):**
     ```python
     except ValidationError as e:
         log.error(
@@ -172,7 +172,7 @@ This document provides a detailed comparison of the Functional Requirements Docu
 *   **Status:** Met
 *   **Analysis:** The `PostgresConnector` fully adheres to the performance mandate by using the `COPY` protocol via `psycopg`'s `cursor.copy()` method. This streams data directly to the database, avoiding slow, row-by-row `INSERT` statements.
 
-*   **Code Example (`src/py_load_clinicaltrialsgov/connectors/postgres.py`):**
+*   **Code Example (`src/load_clinicaltrialsgov/connectors/postgres.py`):**
     ```python
     def bulk_load_staging(self, table_name: str, data: pd.DataFrame) -> None:
         staging_table_name = f"staging_{table_name}"
@@ -190,7 +190,7 @@ This document provides a detailed comparison of the Functional Requirements Docu
 *   **Status:** Met
 *   **Analysis:** The `PostgresConnector` implements a sophisticated merge strategy using `INSERT ... ON CONFLICT DO UPDATE` (UPSERT). This ensures that new records are inserted and existing records are updated efficiently from the staging table to the final table.
 
-*   **Code Example (`src/py_load_clinicaltrialsgov/connectors/postgres.py`):**
+*   **Code Example (`src/load_clinicaltrialsgov/connectors/postgres.py`):**
     ```python
     update_assignments = [
         f'"{col}" = EXCLUDED."{col}"' for col in update_cols
@@ -210,7 +210,7 @@ This document provides a detailed comparison of the Functional Requirements Docu
 *   **Status:** Met
 *   **Analysis:** The `Orchestrator` ensures atomicity by wrapping the entire ETL run in a `try...except` block that explicitly manages the database transaction (`begin`, `commit`, `rollback`).
 
-*   **Code Example (`src/py_load_clinicaltrialsgov/orchestrator.py`):**
+*   **Code Example (`src/load_clinicaltrialsgov/orchestrator.py`):**
     ```python
     try:
         self.connector.manage_transaction("begin")
@@ -229,7 +229,7 @@ This document provides a detailed comparison of the Functional Requirements Docu
 *   **Status:** Met
 *   **Analysis:** The `cli.py` file uses `Typer` to provide all required commands: `run`, `init-db`, `migrate-db`, and `status`.
 
-*   **Code Example (`src/py_load_clinicaltrialsgov/cli.py`):**
+*   **Code Example (`src/load_clinicaltrialsgov/cli.py`):**
     ```python
     import typer
     app = typer.Typer()
@@ -251,7 +251,7 @@ This document provides a detailed comparison of the Functional Requirements Docu
 *   **Status:** Met
 *   **Analysis:** `structlog` is configured in `cli.py` with `JSONRenderer`. This ensures that all log output across the application is in a machine-readable JSON format, suitable for modern monitoring systems.
 
-*   **Code Example (`src/py_load_clinicaltrialsgov/cli.py`):**
+*   **Code Example (`src/load_clinicaltrialsgov/cli.py`):**
     ```python
     import structlog
 

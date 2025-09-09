@@ -8,11 +8,11 @@ from typing import Any
 from alembic.config import Config
 from alembic import command
 
-from py_load_clinicaltrialsgov.connectors.postgres import PostgresConnector
-from py_load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
-from py_load_clinicaltrialsgov.extractor.api_client import APIClient
-from py_load_clinicaltrialsgov.transformer.transformer import Transformer
-from py_load_clinicaltrialsgov.orchestrator import Orchestrator
+from load_clinicaltrialsgov.connectors.postgres import PostgresConnector
+from load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
+from load_clinicaltrialsgov.extractor.api_client import APIClient
+from load_clinicaltrialsgov.transformer.transformer import Transformer
+from load_clinicaltrialsgov.orchestrator import Orchestrator
 
 
 # Configure structlog for JSON output

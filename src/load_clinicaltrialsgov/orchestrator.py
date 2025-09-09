@@ -4,11 +4,11 @@ from typing import Dict, List, Any
 from collections import Counter
 from pydantic import ValidationError
 
-from py_load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
-from py_load_clinicaltrialsgov.extractor.api_client import APIClient
-from py_load_clinicaltrialsgov.transformer.transformer import Transformer
-from py_load_clinicaltrialsgov.config import settings
-from py_load_clinicaltrialsgov.models.api_models import Study
+from load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
+from load_clinicaltrialsgov.extractor.api_client import APIClient
+from load_clinicaltrialsgov.transformer.transformer import Transformer
+from load_clinicaltrialsgov.config import settings
+from load_clinicaltrialsgov.models.api_models import Study
 
 logger = structlog.get_logger(__name__)
 

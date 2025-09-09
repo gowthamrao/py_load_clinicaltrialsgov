@@ -12,8 +12,8 @@ except ImportError:
     )
 
 
-from py_load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
-from py_load_clinicaltrialsgov.config import settings
+from load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
+from load_clinicaltrialsgov.config import settings
 
 
 class PostgresConnector(DatabaseConnectorInterface):

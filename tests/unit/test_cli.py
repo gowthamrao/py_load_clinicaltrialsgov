@@ -2,8 +2,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from typer.testing import CliRunner
 
-from py_load_clinicaltrialsgov.cli import app
-from py_load_clinicaltrialsgov.models.api_models import Study
+from load_clinicaltrialsgov.cli import app
 
 # Create a runner for testing the Typer app
 runner = CliRunner()
@@ -48,11 +47,11 @@ def test_run_command_sends_invalid_study_to_dlq(
 
     with (
         patch(
-            "py_load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector
+            "load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector
         ),
-        patch("py_load_clinicaltrialsgov.cli.APIClient", return_value=mock_api_client),
+        patch("load_clinicaltrialsgov.cli.APIClient", return_value=mock_api_client),
         patch(
-            "py_load_clinicaltrialsgov.cli.Transformer", return_value=mock_transformer
+            "load_clinicaltrialsgov.cli.Transformer", return_value=mock_transformer
         ),
     ):
         # Act
@@ -101,7 +100,7 @@ def test_status_command_healthy(mock_connector: MagicMock) -> None:
     mock_connector.get_last_load_history.return_value = history_record
 
     with patch(
-        "py_load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector
+        "load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector
     ):
         # Act
         result = runner.invoke(app, ["status"])
@@ -134,7 +133,7 @@ def test_status_command_failed_with_previous_success(mock_connector: MagicMock) 
     mock_connector.get_last_successful_load_history.return_value = successful_record
 
     with patch(
-        "py_load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector
+        "load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector
     ):
         # Act
         result = runner.invoke(app, ["status"])
@@ -166,7 +165,7 @@ def test_status_command_failed_with_no_previous_success(
     mock_connector.get_last_successful_load_history.return_value = None
 
     with patch(
-        "py_load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector
+        "load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector
     ):
         # Act
         result = runner.invoke(app, ["status"])
@@ -185,7 +184,7 @@ def test_status_command_no_history(mock_connector: MagicMock) -> None:
     mock_connector.get_last_load_history.return_value = None
 
     with patch(
-        "py_load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector
+        "load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector
     ):
         # Act
         result = runner.invoke(app, ["status"])
@@ -195,7 +194,7 @@ def test_status_command_no_history(mock_connector: MagicMock) -> None:
         assert "No ETL run history found." in result.stdout
 
 
-@patch("py_load_clinicaltrialsgov.cli.command")
+@patch("load_clinicaltrialsgov.cli.command")
 def test_migrate_db_command(mock_alembic_command: MagicMock) -> None:
     """
     Verify the migrate-db command calls alembic correctly.
