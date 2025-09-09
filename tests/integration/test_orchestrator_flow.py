@@ -1,5 +1,7 @@
+# ruff: noqa: F811
 import pytest
 from unittest.mock import MagicMock, create_autospec
+from typing import Any, cast
 
 from load_clinicaltrialsgov.connectors.postgres import PostgresConnector
 from load_clinicaltrialsgov.extractor.api_client import APIClient
@@ -7,7 +9,7 @@ from load_clinicaltrialsgov.transformer.transformer import Transformer
 from load_clinicaltrialsgov.orchestrator import Orchestrator
 
 # Import fixtures from the other test file
-from .test_full_etl import postgres_container, db_connector
+from .test_full_etl import db_connector, postgres_container  # noqa: F401
 
 
 # A valid study record that should process successfully
@@ -66,12 +68,14 @@ INVALID_STUDY_PAYLOAD_WITH_ID = {
 def mock_api_client() -> MagicMock:
     """Mocks the APIClient to yield predefined study data."""
     mock_client = create_autospec(APIClient)
-    mock_client.get_all_studies.return_value = iter([
-        VALID_STUDY_PAYLOAD,
-        INVALID_STUDY_PAYLOAD,
-        INVALID_STUDY_PAYLOAD_WITH_ID,
-    ])
-    return mock_client
+    mock_client.get_all_studies.return_value = iter(
+        [
+            VALID_STUDY_PAYLOAD,
+            INVALID_STUDY_PAYLOAD,
+            INVALID_STUDY_PAYLOAD_WITH_ID,
+        ]
+    )
+    return cast(MagicMock, mock_client)
 
 
 def test_orchestrator_full_run(
@@ -94,34 +98,59 @@ def test_orchestrator_full_run(
     with db_connector.conn.cursor() as cur:
         # 1. Check for the successfully processed study
         cur.execute("SELECT COUNT(*) FROM studies")
-        assert cur.fetchone()[0] == 1
+        studies_count = cur.fetchone()
+        assert studies_count is not None
+        assert studies_count[0] == 1
+
         cur.execute("SELECT brief_title FROM studies WHERE nct_id = 'NCT000001'")
-        assert cur.fetchone()[0] == "Valid Study"
+        title_result = cur.fetchone()
+        assert title_result is not None
+        assert title_result[0] == "Valid Study"
+
         cur.execute("SELECT COUNT(*) FROM conditions WHERE nct_id = 'NCT000001'")
-        assert cur.fetchone()[0] == 1
+        conditions_count = cur.fetchone()
+        assert conditions_count is not None
+        assert conditions_count[0] == 1
 
         # 2. Check that the raw payload for the SUCCESSFUL study was stored
         cur.execute("SELECT COUNT(*) FROM raw_studies")
-        assert cur.fetchone()[0] == 1
+        raw_studies_count = cur.fetchone()
+        assert raw_studies_count is not None
+        assert raw_studies_count[0] == 1
+
         cur.execute("SELECT payload FROM raw_studies WHERE nct_id = 'NCT000001'")
-        raw_payload = cur.fetchone()[0]
-        assert raw_payload["protocolSection"]["identificationModule"]["nctId"] == "NCT000001"
+        raw_payload_result = cur.fetchone()
+        assert raw_payload_result is not None
+        raw_payload: dict[str, Any] = raw_payload_result[0]
+        assert (
+            raw_payload["protocolSection"]["identificationModule"]["nctId"]
+            == "NCT000001"
+        )
 
         # 3. Check for the quarantined records in the dead-letter queue
         cur.execute("SELECT COUNT(*) FROM dead_letter_queue")
-        assert cur.fetchone()[0] == 2
+        dead_letter_count = cur.fetchone()
+        assert dead_letter_count is not None
+        assert dead_letter_count[0] == 2
 
         # 4. Check the record that failed due to missing NCT ID
-        cur.execute("SELECT nct_id, error_message FROM dead_letter_queue WHERE nct_id IS NULL")
+        cur.execute(
+            "SELECT nct_id, error_message FROM dead_letter_queue WHERE nct_id IS NULL"
+        )
         result_no_id = cur.fetchone()
         assert result_no_id is not None
         assert "Pydantic Validation Error" in result_no_id[1]
 
         # 5. Check the record that failed due to other missing fields but had an ID
-        cur.execute("SELECT payload, error_message FROM dead_letter_queue WHERE nct_id = 'NCT000002'")
+        cur.execute(
+            "SELECT payload, error_message FROM dead_letter_queue WHERE nct_id = 'NCT000002'"
+        )
         result_with_id = cur.fetchone()
         assert result_with_id is not None
-        assert result_with_id[0]["protocolSection"]["identificationModule"]["nctId"] == "NCT000002"
+        assert (
+            result_with_id[0]["protocolSection"]["identificationModule"]["nctId"]
+            == "NCT000002"
+        )
         assert "Pydantic Validation Error" in result_with_id[1]
 
         # 6. Check load history

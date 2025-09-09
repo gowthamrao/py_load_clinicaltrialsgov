@@ -132,11 +132,20 @@ def test_full_etl_flow(db_connector: DatabaseConnectorInterface) -> None:
     # Verify initial load
     with pg_connector.conn.cursor() as cur:
         cur.execute("SELECT COUNT(*) FROM studies WHERE nct_id = 'NCT00000123'")
-        assert cur.fetchone()[0] == 1
+        studies_count = cur.fetchone()
+        assert studies_count is not None
+        assert studies_count[0] == 1
+
         cur.execute("SELECT COUNT(*) FROM interventions WHERE nct_id = 'NCT00000123'")
-        assert cur.fetchone()[0] == 2
+        interventions_count = cur.fetchone()
+        assert interventions_count is not None
+        assert interventions_count[0] == 2
+
         cur.execute("SELECT COUNT(*) FROM design_outcomes WHERE nct_id = 'NCT00000123'")
-        assert cur.fetchone()[0] == 1
+        outcomes_count = cur.fetchone()
+        assert outcomes_count is not None
+        assert outcomes_count[0] == 1
+
         cur.execute(
             "SELECT name FROM interventions WHERE nct_id = 'NCT00000123' AND name = 'Aspirin'"
         )
@@ -184,15 +193,26 @@ def test_full_etl_flow(db_connector: DatabaseConnectorInterface) -> None:
     with pg_connector.conn.cursor() as cur:
         # Check that the study was updated (UPSERT)
         cur.execute("SELECT brief_title FROM studies WHERE nct_id = 'NCT00000123'")
-        assert cur.fetchone()[0] == "Updated Title"
+        title_result = cur.fetchone()
+        assert title_result is not None
+        assert title_result[0] == "Updated Title"
+
         cur.execute("SELECT COUNT(*) FROM studies WHERE nct_id = 'NCT00000123'")
-        assert cur.fetchone()[0] == 1
+        studies_count_after_update = cur.fetchone()
+        assert studies_count_after_update is not None
+        assert studies_count_after_update[0] == 1
 
         # Check that interventions were replaced (DELETE then INSERT)
         cur.execute("SELECT COUNT(*) FROM interventions WHERE nct_id = 'NCT00000123'")
-        assert cur.fetchone()[0] == 1
+        interventions_count_after_update = cur.fetchone()
+        assert interventions_count_after_update is not None
+        assert interventions_count_after_update[0] == 1
+
         cur.execute("SELECT name FROM interventions WHERE nct_id = 'NCT00000123'")
-        assert cur.fetchone()[0] == "Stent"
+        name_result = cur.fetchone()
+        assert name_result is not None
+        assert name_result[0] == "Stent"
+
         cur.execute(
             "SELECT name FROM interventions WHERE nct_id = 'NCT00000123' AND name = 'Aspirin'"
         )

@@ -71,9 +71,7 @@ class Orchestrator:
         Executes the full ETL pipeline.
         """
         start_time = time.time()
-        log = logger.bind(
-            load_type=load_type, batch_size=settings.etl.batch_size
-        )
+        log = logger.bind(load_type=load_type, batch_size=settings.etl.batch_size)
         log.info("etl_process_started")
 
         try:
@@ -105,7 +103,11 @@ class Orchestrator:
 
             for study_dict in studies_iterator:
                 # Extract NCT ID safely before validation
-                nct_id = study_dict.get("protocolSection", {}).get("identificationModule", {}).get("nctId")
+                nct_id = (
+                    study_dict.get("protocolSection", {})
+                    .get("identificationModule", {})
+                    .get("nctId")
+                )
 
                 try:
                     # 1. Validate each study individually
@@ -163,7 +165,9 @@ class Orchestrator:
                 final_batch_metrics = self._load_and_clear_batch()
                 total_table_metrics.update(final_batch_metrics)
 
-            log.info("finished_processing_studies", total_record_count=total_record_count)
+            log.info(
+                "finished_processing_studies", total_record_count=total_record_count
+            )
 
             duration = time.time() - start_time
             metrics: Dict[str, Any] = {

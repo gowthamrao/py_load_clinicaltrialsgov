@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 from typer.testing import CliRunner
+from typing import Any
 
 from load_clinicaltrialsgov.cli import app
 
@@ -38,7 +39,9 @@ def test_run_command_sends_invalid_study_to_dlq(
     """
     # Arrange
     # This payload is invalid because it's missing the 'identificationModule'
-    invalid_study_payload = {"protocolSection": {"statusModule": {}}}
+    invalid_study_payload: dict[str, Any] = {
+        "protocolSection": {"statusModule": {}}
+    }
 
     # Configure mocks
     mock_api_client.get_all_studies.return_value = iter([invalid_study_payload])
@@ -46,21 +49,17 @@ def test_run_command_sends_invalid_study_to_dlq(
     mock_transformer = MagicMock()
 
     with (
-        patch(
-            "load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector
-        ),
+        patch("load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector),
         patch("load_clinicaltrialsgov.cli.APIClient", return_value=mock_api_client),
-        patch(
-            "load_clinicaltrialsgov.cli.Transformer", return_value=mock_transformer
-        ),
+        patch("load_clinicaltrialsgov.cli.Transformer", return_value=mock_transformer),
     ):
         # Act
         result = runner.invoke(app, ["run", "--load-type", "full"])
 
         # Assert
-        assert (
-            result.exit_code == 0
-        ), "The overall process should not fail on a single validation error"
+        assert result.exit_code == 0, (
+            "The overall process should not fail on a single validation error"
+        )
 
         # Verify the DLQ method was called correctly
         mock_connector.record_failed_study.assert_called_once()
@@ -99,9 +98,7 @@ def test_status_command_healthy(mock_connector: MagicMock) -> None:
     }
     mock_connector.get_last_load_history.return_value = history_record
 
-    with patch(
-        "load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector
-    ):
+    with patch("load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector):
         # Act
         result = runner.invoke(app, ["status"])
 
@@ -124,7 +121,7 @@ def test_status_command_failed_with_previous_success(mock_connector: MagicMock) 
         "status": "FAILURE",
         "metrics": {"error": "connection timed out"},
     }
-    successful_record = {
+    successful_record: dict[str, Any] = {
         "load_timestamp": datetime(2023, 1, 1, 12, 0, 0),
         "status": "SUCCESS",
         "metrics": {"records_processed": 100},
@@ -132,9 +129,7 @@ def test_status_command_failed_with_previous_success(mock_connector: MagicMock) 
     mock_connector.get_last_load_history.return_value = failed_record
     mock_connector.get_last_successful_load_history.return_value = successful_record
 
-    with patch(
-        "load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector
-    ):
+    with patch("load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector):
         # Act
         result = runner.invoke(app, ["status"])
 
@@ -164,9 +159,7 @@ def test_status_command_failed_with_no_previous_success(
     mock_connector.get_last_load_history.return_value = failed_record
     mock_connector.get_last_successful_load_history.return_value = None
 
-    with patch(
-        "load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector
-    ):
+    with patch("load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector):
         # Act
         result = runner.invoke(app, ["status"])
 
@@ -183,9 +176,7 @@ def test_status_command_no_history(mock_connector: MagicMock) -> None:
     # Arrange
     mock_connector.get_last_load_history.return_value = None
 
-    with patch(
-        "load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector
-    ):
+    with patch("load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector):
         # Act
         result = runner.invoke(app, ["status"])
 

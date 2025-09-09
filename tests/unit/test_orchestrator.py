@@ -6,7 +6,7 @@ from load_clinicaltrialsgov.models.api_models import Study
 
 
 class TestOrchestrator(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.mock_connector = MagicMock()
         self.mock_api_client = MagicMock()
         self.mock_transformer = MagicMock()
@@ -38,7 +38,7 @@ class TestOrchestrator(unittest.TestCase):
             "hasResults": False,
         }
 
-    def test_orchestrator_handles_validation_error_gracefully(self):
+    def test_orchestrator_handles_validation_error_gracefully(self) -> None:
         """
         Verify that the orchestrator can handle a Pydantic validation error.
 
@@ -67,16 +67,19 @@ class TestOrchestrator(unittest.TestCase):
         # We need to check the call argument is a Study object, not a dict
         args, _ = self.mock_transformer.transform_study.call_args
         self.assertIsInstance(args[0], Study)
-        self.assertEqual(args[0].protocol_section.identification_module.nct_id, "NCT00000001")
-
+        self.assertEqual(
+            args[0].protocol_section.identification_module.nct_id, "NCT00000001"
+        )
 
         # 2. The dead-letter queue was used for the invalid study
         self.mock_connector.record_failed_study.assert_called_once()
         # Check that the payload sent to dead-letter queue is the invalid one
         _, kwargs = self.mock_connector.record_failed_study.call_args
-        self.assertEqual(kwargs['nct_id'], "NCT00000002") # nct_id should be parsed even if validation fails
-        self.assertEqual(kwargs['payload'], self.invalid_study_dict)
-        self.assertIn("Pydantic Validation Error", kwargs['error_message'])
+        self.assertEqual(
+            kwargs["nct_id"], "NCT00000002"
+        )  # nct_id should be parsed even if validation fails
+        self.assertEqual(kwargs["payload"], self.invalid_study_dict)
+        self.assertIn("Pydantic Validation Error", kwargs["error_message"])
 
         # 3. The transaction was successfully committed
         self.mock_connector.manage_transaction.assert_has_calls(
