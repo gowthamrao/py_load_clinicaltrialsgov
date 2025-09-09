@@ -2,9 +2,9 @@ import pytest
 import time
 from testcontainers.postgres import PostgresContainer
 import pandas as pd
-from py_load_clinicaltrialsgov.connectors.postgres import PostgresConnector
-from py_load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
-from py_load_clinicaltrialsgov.config import settings
+from load_clinicaltrialsgov.connectors.postgres import PostgresConnector
+from load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
+from load_clinicaltrialsgov.config import settings
 
 from alembic.config import Config
 from alembic import command

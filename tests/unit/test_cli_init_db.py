@@ -1,13 +1,13 @@
 from typer.testing import CliRunner
 from unittest.mock import MagicMock, patch
 
-from py_load_clinicaltrialsgov.cli import app
+from load_clinicaltrialsgov.cli import app
 
 runner = CliRunner()
 
 
-@patch("py_load_clinicaltrialsgov.cli.get_connector")
-@patch("py_load_clinicaltrialsgov.cli.migrate_db")
+@patch("load_clinicaltrialsgov.cli.get_connector")
+@patch("load_clinicaltrialsgov.cli.migrate_db")
 def test_init_db_aborted(
     mock_migrate_db: MagicMock, mock_get_connector: MagicMock
 ) -> None:
@@ -24,8 +24,8 @@ def test_init_db_aborted(
     mock_migrate_db.assert_not_called()
 
 
-@patch("py_load_clinicaltrialsgov.cli.get_connector")
-@patch("py_load_clinicaltrialsgov.cli.migrate_db")
+@patch("load_clinicaltrialsgov.cli.get_connector")
+@patch("load_clinicaltrialsgov.cli.migrate_db")
 def test_init_db_successful(
     mock_migrate_db: MagicMock, mock_get_connector: MagicMock
 ) -> None:
@@ -43,8 +43,8 @@ def test_init_db_successful(
     mock_migrate_db.assert_called_once_with(revision="head")
 
 
-@patch("py_load_clinicaltrialsgov.cli.get_connector")
-@patch("py_load_clinicaltrialsgov.cli.migrate_db")
+@patch("load_clinicaltrialsgov.cli.get_connector")
+@patch("load_clinicaltrialsgov.cli.migrate_db")
 def test_init_db_force(
     mock_migrate_db: MagicMock, mock_get_connector: MagicMock
 ) -> None:

@@ -2,12 +2,10 @@ import httpx
 import pytest
 from datetime import datetime
 from typing import List, Tuple, Any
-from unittest.mock import MagicMock
 
-from tenacity import RetryError
 
-from py_load_clinicaltrialsgov.extractor.api_client import APIClient
-from py_load_clinicaltrialsgov.config import settings
+from load_clinicaltrialsgov.extractor.api_client import APIClient
+from load_clinicaltrialsgov.config import settings
 
 from httpx import MockTransport, Response
 

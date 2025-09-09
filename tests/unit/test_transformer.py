@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime
-from py_load_clinicaltrialsgov.transformer.transformer import Transformer
-from py_load_clinicaltrialsgov.models.api_models import Study
+from load_clinicaltrialsgov.transformer.transformer import Transformer
+from load_clinicaltrialsgov.models.api_models import Study
 
 
 def test_transform_study():
@@ -107,11 +107,11 @@ def test_transform_study_with_collaborators():
     sponsors_df = dataframes["sponsors"]
     assert len(sponsors_df) == 3
 
-    lead_sponsor = sponsors_df[sponsors_df["is_lead"] == True]
+    lead_sponsor = sponsors_df[sponsors_df["is_lead"]]
     assert len(lead_sponsor) == 1
     assert lead_sponsor.iloc[0]["name"] == "Lead Sponsor Inc."
 
-    collaborators = sponsors_df[sponsors_df["is_lead"] == False]
+    collaborators = sponsors_df[~sponsors_df["is_lead"]]
     assert len(collaborators) == 2
     assert "Collaborator 1" in collaborators["name"].values
     assert "Collaborator 2" in collaborators["name"].values

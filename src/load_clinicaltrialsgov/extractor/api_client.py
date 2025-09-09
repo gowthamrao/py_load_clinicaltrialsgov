@@ -3,7 +3,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from typing import Iterator, Dict, Any, Optional
 from datetime import datetime
 
-from py_load_clinicaltrialsgov.config import settings
+from load_clinicaltrialsgov.config import settings
 
 BASE_URL = "https://clinicaltrials.gov/api/v2/studies"
 
