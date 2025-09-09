@@ -1,8 +1,12 @@
 import pandas as pd
 import json
+import structlog
 from typing import Dict, List, Any
 from py_load_clinicaltrialsgov.models.api_models import Study
 from datetime import datetime, UTC
+from dateutil.parser import parse as date_parse, ParserError
+
+logger = structlog.get_logger(__name__)
 
 
 class Transformer:
@@ -183,29 +187,20 @@ class Transformer:
 
     def _normalize_date(self, date_str: str | None) -> datetime | None:
         """
-        Normalizes a date string to a datetime object.
-        Handles formats like 'YYYY-MM' by defaulting to the first day of the month.
+        Normalizes a date string to a datetime object using dateutil.parser.
+
+        Handles various formats like 'YYYY-MM-DD', 'Month YYYY', 'YYYY-MM', 'YYYY'.
+        Partial dates are normalized to the first day of the period.
         """
         if not date_str:
             return None
         try:
-            # First, try to parse as a full date
-            return datetime.strptime(date_str, "%Y-%m-%d")
-        except ValueError:
-            try:
-                # If that fails, try to parse as 'Month YYYY' (e.g., "January 2023")
-                return datetime.strptime(date_str, "%B %Y")
-            except ValueError:
-                try:
-                    # If that fails, try to parse as 'YYYY-MM'
-                    return datetime.strptime(date_str, "%Y-%m")
-                except ValueError:
-                    try:
-                        # Finally, try to parse as 'YYYY'
-                        return datetime.strptime(date_str, "%Y")
-                    except ValueError:
-                        # Add more formats here if needed
-                        return None
+            # default sets the date parts that are not present in the string
+            # e.g., "2023" -> 2023-01-01, "October 2023" -> 2023-10-01
+            return date_parse(date_str, default=datetime(1, 1, 1))
+        except (ParserError, TypeError):
+            logger.warning("unparseable_date_string", date_string=date_str)
+            return None
 
     def get_dataframes(self) -> Dict[str, pd.DataFrame]:
         """
