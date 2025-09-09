@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from py_load_clinicaltrialsgov.models.api_models import (
+from load_clinicaltrialsgov.models.api_models import (
     DescriptionModule,
     ConditionsModule,
     ProtocolSection,

@@ -10,7 +10,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import importlib.resources
-from py_load_clinicaltrialsgov import sql
+from load_clinicaltrialsgov import sql
 
 
 # revision identifiers, used by Alembic.

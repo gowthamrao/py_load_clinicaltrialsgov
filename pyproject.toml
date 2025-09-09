@@ -6,6 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Gowtham Rao", email = "rao@ohdsi.org" }
 ]
+license = "Apache-2.0"
 requires-python = ">=3.11"
 dependencies = [
     "httpx",
@@ -20,6 +21,22 @@ dependencies = [
     "SQLAlchemy",
     "python-dateutil (>=2.9.0.post0,<3.0.0)"
 ]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+]
+keywords = ["clinicaltrials.gov", "etl", "api", "ohdsi"]
+
+[project.urls]
+Homepage = "https://github.com/gowthamrao/py_load_clinicaltrialsgov"
+Source = "https://github.com/gowthamrao/py_load_clinicaltrialsgov"
 
 [project.optional-dependencies]
 postgres = ["psycopg[binary]"]
@@ -42,3 +59,6 @@ line-length = 88
 [tool.mypy]
 strict = true
 ignore_missing_imports = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/load_clinicaltrialsgov"]

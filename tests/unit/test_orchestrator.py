@@ -1,9 +1,8 @@
 import unittest
-from unittest.mock import MagicMock, patch, call
-from pydantic import ValidationError
+from unittest.mock import MagicMock, call
 
-from py_load_clinicaltrialsgov.orchestrator import Orchestrator
-from py_load_clinicaltrialsgov.models.api_models import Study
+from load_clinicaltrialsgov.orchestrator import Orchestrator
+from load_clinicaltrialsgov.models.api_models import Study
 
 
 class TestOrchestrator(unittest.TestCase):
