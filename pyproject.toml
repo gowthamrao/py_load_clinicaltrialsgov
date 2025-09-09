@@ -1,10 +1,10 @@
 [project]
-name = "py-load-clinicaltrialsgov"
+name = "py_load_clinicaltrialsgov"
 version = "0.1.0"
 description = "An ETL package for loading data from ClinicalTrials.gov V2 API into a relational database."
 readme = "README.md"
 authors = [
-    { name = "Jules", email = "jules@example.com" }
+    { name = "Gowtham Rao", email = "rao@ohdsi.org" }
 ]
 requires-python = ">=3.11"
 dependencies = [
