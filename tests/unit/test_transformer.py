@@ -4,7 +4,7 @@ from load_clinicaltrialsgov.transformer.transformer import Transformer
 from load_clinicaltrialsgov.models.api_models import Study
 
 
-def test_transform_study():
+def test_transform_study() -> None:
     # Create a mock study object
     mock_study_data = {
         "protocolSection": {
@@ -49,9 +49,7 @@ def test_transform_study():
     assert dataframes["studies"].iloc[0]["brief_title"] == "Test Study"
     assert dataframes["studies"].iloc[0]["start_date"] is not None
     assert dataframes["studies"].iloc[0]["start_date_str"] == "2023-01"
-    assert (
-        dataframes["studies"].iloc[0]["primary_completion_date_str"] == "2024-01-01"
-    )
+    assert dataframes["studies"].iloc[0]["primary_completion_date_str"] == "2024-01-01"
 
     # Assertions for sponsors
     assert len(dataframes["sponsors"]) == 1
@@ -62,7 +60,7 @@ def test_transform_study():
 
 
 @pytest.mark.parametrize(
-    "date_str, expected_date",
+    ("date_str", "expected_date"),
     [
         ("2023-05-15", datetime(2023, 5, 15)),
         ("2023-07", datetime(2023, 7, 1)),
@@ -75,12 +73,14 @@ def test_transform_study():
         ("", None),
     ],
 )
-def test_normalize_date(date_str, expected_date):
+def test_normalize_date(
+    date_str: str | None, expected_date: datetime | None
+) -> None:
     transformer = Transformer()
     assert transformer._normalize_date(date_str) == expected_date
 
 
-def test_transform_study_with_collaborators():
+def test_transform_study_with_collaborators() -> None:
     mock_study_data = {
         "protocolSection": {
             "identificationModule": {"nctId": "NCT54321"},
@@ -118,6 +118,7 @@ def test_transform_study_with_collaborators():
 
     # Assertions for date parsing
     studies_df = dataframes["studies"]
-    assert studies_df.iloc[0]["start_date"].year == 2022
-    assert studies_df.iloc[0]["start_date"].month == 1
-    assert studies_df.iloc[0]["start_date"].day == 1
+    start_date = studies_df.iloc[0]["start_date"]
+    assert start_date.year == 2022
+    assert start_date.month == 1
+    assert start_date.day == 1

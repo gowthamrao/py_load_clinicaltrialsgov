@@ -46,7 +46,8 @@ dev = [
     "pytest",
     "pytest-cov",
     "testcontainers",
-    "pre-commit"
+    "pre-commit",
+    "types-python-dateutil"
 ]
 
 [build-system]
