@@ -116,7 +116,7 @@ def test_orchestrator_full_run(
         cur.execute("SELECT nct_id, error_message FROM dead_letter_queue WHERE nct_id IS NULL")
         result_no_id = cur.fetchone()
         assert result_no_id is not None
-        assert "Transformation Error" in result_no_id[1]
+        assert "Pydantic Validation Error" in result_no_id[1]
 
         # 5. Check the record that failed due to other missing fields but had an ID
         cur.execute("SELECT payload, error_message FROM dead_letter_queue WHERE nct_id = 'NCT000002'")

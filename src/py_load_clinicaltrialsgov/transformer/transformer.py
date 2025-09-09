@@ -27,26 +27,28 @@ class Transformer:
         Transforms a single study object and appends the data to internal lists.
         """
         if (
-            not study.protocol_section.identification_module
-            or not study.protocol_section.identification_module.get("nctId")
+            not study.protocol_section
+            or not study.protocol_section.identification_module
+            or not study.protocol_section.identification_module.nct_id
         ):
             raise ValueError("Study is missing required nctId")
 
-        nct_id = study.protocol_section.identification_module["nctId"]
+        nct_id = study.protocol_section.identification_module.nct_id
 
-        self._transform_raw_studies(nct_id, raw_study_payload)
+        self._transform_raw_studies(nct_id, raw_study_payload, study)
         self._transform_studies_table(nct_id, study)
         self._transform_sponsors(nct_id, study)
         self._transform_conditions(nct_id, study)
         self._transform_interventions(nct_id, study)
         self._transform_outcomes(nct_id, study)
 
-    def _transform_raw_studies(self, nct_id: str, raw_payload: Dict[str, Any]) -> None:
+    def _transform_raw_studies(
+        self, nct_id: str, raw_payload: Dict[str, Any], study: Study
+    ) -> None:
         last_updated_str = (
-            raw_payload.get("protocolSection", {})
-            .get("statusModule", {})
-            .get("lastUpdatePostDateStruct", {})
-            .get("date")
+            study.protocol_section.status_module.last_update_post_date_struct.date
+            if study.protocol_section.status_module.last_update_post_date_struct
+            else None
         )
 
         self.raw_studies.append(
@@ -60,39 +62,38 @@ class Transformer:
         )
 
     def _transform_studies_table(self, nct_id: str, study: Study) -> None:
-        start_date_str = None
-        completion_date_str = None
-        overall_status = None
-        if study.protocol_section.status_module:
-            start_date_str = study.protocol_section.status_module.get(
-                "startDateStruct", {}
-            ).get("date")
-            completion_date_str = study.protocol_section.status_module.get(
-                "primaryCompletionDateStruct", {}
-            ).get("date")
-            overall_status = study.protocol_section.status_module.get("overallStatus")
+        id_module = study.protocol_section.identification_module
+        status_module = study.protocol_section.status_module
 
-        study_type = None
-        if study.protocol_section.design_module:
-            study_type = study.protocol_section.design_module.get("studyType")
+        start_date_str = (
+            status_module.start_date_struct.date
+            if status_module.start_date_struct
+            else None
+        )
+        completion_date_str = (
+            status_module.primary_completion_date_struct.date
+            if status_module.primary_completion_date_struct
+            else None
+        )
 
-        brief_summary = None
-        if (
-            study.protocol_section.description_module
-            and study.protocol_section.description_module.brief_summary
-        ):
-            brief_summary = study.protocol_section.description_module.brief_summary
+        study_type = (
+            study.protocol_section.design_module.study_type
+            if study.protocol_section.design_module
+            else None
+        )
 
-        # The identification_module is guaranteed to exist by the check
-        # in the main transform_study method.
-        identification_module = study.protocol_section.identification_module or {}
+        brief_summary = (
+            study.protocol_section.description_module.brief_summary
+            if study.protocol_section.description_module
+            else None
+        )
 
         self.studies.append(
             {
                 "nct_id": nct_id,
-                "brief_title": identification_module.get("briefTitle"),
-                "official_title": identification_module.get("officialTitle"),
-                "overall_status": overall_status,
+                "brief_title": id_module.brief_title,
+                "official_title": id_module.official_title,
+                "overall_status": status_module.overall_status,
                 "start_date": self._normalize_date(start_date_str),
                 "start_date_str": start_date_str,
                 "primary_completion_date": self._normalize_date(completion_date_str),
@@ -107,7 +108,6 @@ class Transformer:
         if not module:
             return
 
-        # Process the lead sponsor
         if module.lead_sponsor:
             self.sponsors.append(
                 {
@@ -118,7 +118,6 @@ class Transformer:
                 }
             )
 
-        # Process the collaborators
         if module.collaborators:
             for collaborator in module.collaborators:
                 self.sponsors.append(
@@ -131,22 +130,16 @@ class Transformer:
                 )
 
     def _transform_conditions(self, nct_id: str, study: Study) -> None:
-        if (
-            study.protocol_section.conditions_module
-            and study.protocol_section.conditions_module.conditions
-        ):
-            for condition in study.protocol_section.conditions_module.conditions:
+        module = study.protocol_section.conditions_module
+        if module and module.conditions:
+            for condition in module.conditions:
                 self.conditions.append({"nct_id": nct_id, "name": condition})
 
     def _transform_interventions(self, nct_id: str, study: Study) -> None:
-        if (
-            not study.protocol_section.arms_interventions_module
-            or not study.protocol_section.arms_interventions_module.interventions
-        ):
+        module = study.protocol_section.arms_interventions_module
+        if not module or not module.interventions:
             return
-        for (
-            intervention
-        ) in study.protocol_section.arms_interventions_module.interventions:
+        for intervention in module.interventions:
             self.interventions.append(
                 {
                     "nct_id": nct_id,
@@ -157,12 +150,12 @@ class Transformer:
             )
 
     def _transform_outcomes(self, nct_id: str, study: Study) -> None:
-        if not study.protocol_section.outcomes_module:
+        module = study.protocol_section.outcomes_module
+        if not module:
             return
 
-        outcomes_module = study.protocol_section.outcomes_module
-        if outcomes_module.primary_outcomes:
-            for outcome in outcomes_module.primary_outcomes:
+        if module.primary_outcomes:
+            for outcome in module.primary_outcomes:
                 self.design_outcomes.append(
                     {
                         "nct_id": nct_id,
@@ -173,8 +166,8 @@ class Transformer:
                     }
                 )
 
-        if outcomes_module.secondary_outcomes:
-            for outcome in outcomes_module.secondary_outcomes:
+        if module.secondary_outcomes:
+            for outcome in module.secondary_outcomes:
                 self.design_outcomes.append(
                     {
                         "nct_id": nct_id,
@@ -186,26 +179,15 @@ class Transformer:
                 )
 
     def _normalize_date(self, date_str: str | None) -> datetime | None:
-        """
-        Normalizes a date string to a datetime object using dateutil.parser.
-
-        Handles various formats like 'YYYY-MM-DD', 'Month YYYY', 'YYYY-MM', 'YYYY'.
-        Partial dates are normalized to the first day of the period.
-        """
         if not date_str:
             return None
         try:
-            # default sets the date parts that are not present in the string
-            # e.g., "2023" -> 2023-01-01, "October 2023" -> 2023-10-01
             return date_parse(date_str, default=datetime(1, 1, 1))
         except (ParserError, TypeError):
             logger.warning("unparseable_date_string", date_string=date_str)
             return None
 
     def get_dataframes(self) -> Dict[str, pd.DataFrame]:
-        """
-        Returns a dictionary of pandas DataFrames for each table.
-        """
         dataframes = {
             "raw_studies": pd.DataFrame(self.raw_studies),
             "studies": pd.DataFrame(self.studies),
@@ -214,13 +196,9 @@ class Transformer:
             "interventions": pd.DataFrame(self.interventions),
             "design_outcomes": pd.DataFrame(self.design_outcomes),
         }
-        # Filter out empty dataframes
         return {name: df for name, df in dataframes.items() if not df.empty}
 
     def clear(self) -> None:
-        """
-        Resets the internal data lists to clear the state for the next batch.
-        """
         self.raw_studies.clear()
         self.studies.clear()
         self.sponsors.clear()
