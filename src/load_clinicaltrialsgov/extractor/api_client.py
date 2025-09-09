@@ -1,6 +1,6 @@
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
-from typing import Iterator, Dict, Any, Optional
+from typing import Iterator, Dict, Any, Optional, cast
 from datetime import datetime
 
 from load_clinicaltrialsgov.config import settings
@@ -44,7 +44,7 @@ class APIClient:
         """
         response = self.client.get(BASE_URL, params=params)
         response.raise_for_status()
-        return response.json()
+        return cast(Dict[str, Any], response.json())
 
     def get_all_studies(
         self, updated_since: Optional[datetime] = None

@@ -17,7 +17,15 @@ def mock_transport() -> MockTransport:
             return Response(
                 200,
                 json={
-                    "studies": [{"protocolSection": {"identificationModule": {"nctId": "NCT00000002"}}, "derivedSection": {}, "hasResults": False}],
+                    "studies": [
+                        {
+                            "protocolSection": {
+                                "identificationModule": {"nctId": "NCT00000002"}
+                            },
+                            "derivedSection": {},
+                            "hasResults": False,
+                        }
+                    ],
                     "nextPageToken": None,
                 },
             )
@@ -25,14 +33,30 @@ def mock_transport() -> MockTransport:
             return Response(
                 200,
                 json={
-                    "studies": [{"protocolSection": {"identificationModule": {"nctId": "NCT00000003"}}, "derivedSection": {}, "hasResults": False}],
+                    "studies": [
+                        {
+                            "protocolSection": {
+                                "identificationModule": {"nctId": "NCT00000003"}
+                            },
+                            "derivedSection": {},
+                            "hasResults": False,
+                        }
+                    ],
                     "nextPageToken": None,
                 },
             )
         return Response(
             200,
             json={
-                "studies": [{"protocolSection": {"identificationModule": {"nctId": "NCT00000001"}}, "derivedSection": {}, "hasResults": False}],
+                "studies": [
+                    {
+                        "protocolSection": {
+                            "identificationModule": {"nctId": "NCT00000001"}
+                        },
+                        "derivedSection": {},
+                        "hasResults": False,
+                    }
+                ],
                 "nextPageToken": "next",
             },
         )
@@ -68,7 +92,9 @@ def test_get_all_studies_delta_load(mock_transport: MockTransport) -> None:
     studies = list(client.get_all_studies(updated_since=datetime(2023, 1, 1)))
     assert len(studies) == 1
     assert "protocolSection" in studies[0]
-    assert studies[0]["protocolSection"]["identificationModule"]["nctId"] == "NCT00000003"
+    assert (
+        studies[0]["protocolSection"]["identificationModule"]["nctId"] == "NCT00000003"
+    )
 
 
 @pytest.mark.parametrize(
@@ -81,7 +107,7 @@ def test_get_all_studies_delta_load(mock_transport: MockTransport) -> None:
 )
 def test_fetch_page_retries_on_retryable_errors(retryable_status_code: int) -> None:
     # Arrange
-    responses = [
+    responses: List[Tuple[int, dict[str, Any]] | Exception] = [
         (retryable_status_code, {"error": "transient error"}),
         (200, {"studies": [], "nextPageToken": None}),
     ]
@@ -98,7 +124,7 @@ def test_fetch_page_retries_on_retryable_errors(retryable_status_code: int) -> N
 
 def test_fetch_page_retries_on_timeout() -> None:
     # Arrange
-    responses = [
+    responses: List[Tuple[int, dict[str, Any]] | Exception] = [
         httpx.TimeoutException("timeout"),
         (200, {"studies": [], "nextPageToken": None}),
     ]
@@ -127,7 +153,9 @@ def test_fetch_page_does_not_retry_on_non_retryable_errors(
     # Arrange
     # Set retries to 1 to ensure the test fails fast if retry logic is wrong
     settings.api.max_retries = 1
-    responses = [(non_retryable_status_code, {"error": "client error"})]
+    responses: List[Tuple[int, dict[str, Any]] | Exception] = [
+        (non_retryable_status_code, {"error": "client error"})
+    ]
     transport = MockStatefulTransport(responses)
     client = APIClient()
     client.client = httpx.Client(transport=transport)
