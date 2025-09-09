@@ -42,6 +42,14 @@ class OutcomesModule(BaseModel):
     other_outcomes: Optional[List[Outcome]] = Field(None, alias="otherOutcomes")
 
 
+class DescriptionModule(BaseModel):
+    brief_summary: Optional[str] = Field(None, alias="briefSummary")
+
+
+class ConditionsModule(BaseModel):
+    conditions: Optional[List[str]] = None
+
+
 class ProtocolSection(BaseModel):
     # This is a placeholder, will be populated based on detailed JSON structure
     identification_module: Optional[dict[str, Any]] = Field(
@@ -52,10 +60,12 @@ class ProtocolSection(BaseModel):
         None, alias="sponsorCollaboratorsModule"
     )
     oversight_module: Optional[dict[str, Any]] = Field(None, alias="oversightModule")
-    description_module: Optional[dict[str, Any]] = Field(
+    description_module: Optional[DescriptionModule] = Field(
         None, alias="descriptionModule"
     )
-    conditions_module: Optional[dict[str, Any]] = Field(None, alias="conditionsModule")
+    conditions_module: Optional[ConditionsModule] = Field(
+        None, alias="conditionsModule"
+    )
     design_module: Optional[dict[str, Any]] = Field(None, alias="designModule")
     arms_interventions_module: Optional[ArmsInterventionsModule] = Field(
         None, alias="armsInterventionsModule"

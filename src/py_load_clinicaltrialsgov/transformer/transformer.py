@@ -73,10 +73,11 @@ class Transformer:
             study_type = study.protocol_section.design_module.get("studyType")
 
         brief_summary = None
-        if study.protocol_section.description_module:
-            brief_summary = study.protocol_section.description_module.get(
-                "briefSummary"
-            )
+        if (
+            study.protocol_section.description_module
+            and study.protocol_section.description_module.brief_summary
+        ):
+            brief_summary = study.protocol_section.description_module.brief_summary
 
         # The identification_module is guaranteed to exist by the check
         # in the main transform_study method.
@@ -126,9 +127,11 @@ class Transformer:
                 )
 
     def _transform_conditions(self, nct_id: str, study: Study) -> None:
-        if study.protocol_section.conditions_module:
-            conditions = study.protocol_section.conditions_module.get("conditions", [])
-            for condition in conditions:
+        if (
+            study.protocol_section.conditions_module
+            and study.protocol_section.conditions_module.conditions
+        ):
+            for condition in study.protocol_section.conditions_module.conditions:
                 self.conditions.append({"nct_id": nct_id, "name": condition})
 
     def _transform_interventions(self, nct_id: str, study: Study) -> None:
