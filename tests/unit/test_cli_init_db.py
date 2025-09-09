@@ -39,7 +39,7 @@ def test_init_db_successful(
 
     assert result.exit_code == 0
     mock_get_connector.assert_called_once_with("postgres")
-    mock_connector.initialize_schema.assert_called_once()
+    mock_connector._dangerously_drop_all_tables.assert_called_once()
     mock_migrate_db.assert_called_once_with(revision="head")
 
 
@@ -58,5 +58,5 @@ def test_init_db_force(
 
     assert result.exit_code == 0
     mock_get_connector.assert_called_once_with("postgres")
-    mock_connector.initialize_schema.assert_called_once()
+    mock_connector._dangerously_drop_all_tables.assert_called_once()
     mock_migrate_db.assert_called_once_with(revision="head")

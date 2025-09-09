@@ -14,8 +14,14 @@ class DatabaseConnectorInterface(ABC):
     """
 
     @abstractmethod
-    def initialize_schema(self) -> None:
-        """Create or verify the target database schema."""
+    def _dangerously_drop_all_tables(self) -> None:
+        """
+        Drop all known tables from the database.
+
+        This is a destructive operation intended to be used ONLY by the
+        `init-db` CLI command to completely reset the database before
+        running migrations from scratch.
+        """
         raise NotImplementedError
 
     @abstractmethod
