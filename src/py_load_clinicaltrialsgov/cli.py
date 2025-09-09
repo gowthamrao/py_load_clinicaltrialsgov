@@ -72,8 +72,10 @@ def init_db(
     force: Annotated[bool, typer.Option(help="Bypass confirmation prompt.")] = False,
 ) -> None:
     """
-    Initialize the database by dropping all existing tables and running migrations.
-    Warning: This is a destructive operation.
+    DESTRUCTIVE: Drops all tables and re-creates the schema from scratch.
+
+    This command will completely wipe the database by dropping all known tables,
+    then run all Alembic migrations to create a fresh schema.
     """
     if not force:
         confirm = typer.confirm(
@@ -84,15 +86,18 @@ def init_db(
             logger.warning("database_initialization_aborted")
             raise typer.Abort()
 
-    logger.info("initializing_database")
+    logger.info("initializing_database_from_scratch")
     try:
         connector = get_connector(connector_name)
-        logger.info("dropping_existing_tables")
-        connector.initialize_schema()
+        logger.info("step_1_dropping_all_existing_tables")
+        # pylint: disable=protected-access
+        connector._dangerously_drop_all_tables()
         logger.info("tables_dropped_successfully")
 
         # After clearing the schema, run migrations to create it again
+        logger.info("step_2_running_migrations_to_create_fresh_schema")
         migrate_db(revision="head")
+        logger.info("database_successfully_initialized")
 
     except Exception as e:
         logger.error("failed_to_initialize_database", error=str(e), exc_info=True)

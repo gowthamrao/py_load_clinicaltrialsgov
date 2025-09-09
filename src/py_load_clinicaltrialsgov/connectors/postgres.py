@@ -24,12 +24,29 @@ class PostgresConnector(DatabaseConnectorInterface):
     def __init__(self) -> None:
         self.conn = psycopg.connect(settings.db.dsn)
 
-    def initialize_schema(self) -> None:
+    def _dangerously_drop_all_tables(self) -> None:
         """
-        This method is now a no-op. Schema management is handled by Alembic.
-        Use the `migrate-db` CLI command to create or update the schema.
+        Drop all tables in the public schema.
+
+        This is a destructive operation intended to be used ONLY by the
+        `init-db` CLI command to completely reset the database before
+        running migrations from scratch. It dynamically finds all tables
+        in the 'public' schema and drops them.
         """
-        pass
+        with self.conn.cursor() as cur:
+            # Get all table names in the public schema
+            cur.execute(
+                "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public'"
+            )
+            tables = [row[0] for row in cur.fetchall()]
+
+            if tables:
+                # DROP TABLE is a DDL command and runs in its own transaction.
+                # We use CASCADE to drop dependent objects like views or constraints.
+                table_list = ", ".join(f'"{table}"' for table in tables)
+                cur.execute(f"DROP TABLE IF EXISTS {table_list} CASCADE")
+
+        self.conn.commit()
 
     def truncate_all_tables(self) -> None:
         """
