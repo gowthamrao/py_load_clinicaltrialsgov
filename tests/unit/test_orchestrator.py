@@ -68,7 +68,7 @@ class TestOrchestrator(unittest.TestCase):
         # We need to check the call argument is a Study object, not a dict
         args, _ = self.mock_transformer.transform_study.call_args
         self.assertIsInstance(args[0], Study)
-        self.assertEqual(args[0].protocol_section.identification_module['nctId'], "NCT00000001")
+        self.assertEqual(args[0].protocol_section.identification_module.nct_id, "NCT00000001")
 
 
         # 2. The dead-letter queue was used for the invalid study

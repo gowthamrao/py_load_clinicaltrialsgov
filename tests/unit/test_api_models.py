@@ -48,7 +48,8 @@ def test_protocol_section_with_new_models():
     Tests that the ProtocolSection correctly uses the new, typed models.
     """
     data = {
-        "statusModule": {"someStatus": "done"},
+        "identificationModule": {"nctId": "NCT123"},
+        "statusModule": {"overallStatus": "COMPLETED"},
         "descriptionModule": {"briefSummary": "A valid summary."},
         "conditionsModule": {"conditions": ["Condition 1"]},
     }
@@ -64,7 +65,8 @@ def test_protocol_section_validation_error():
     Tests that a validation error is raised for invalid data in the new models.
     """
     data = {
-        "statusModule": {"someStatus": "done"},
+        "identificationModule": {"nctId": "NCT123"},
+        "statusModule": {"overallStatus": "COMPLETED"},
         # Pass a non-string to briefSummary
         "descriptionModule": {"briefSummary": 12345},
         "conditionsModule": {"conditions": ["Condition 1"]},

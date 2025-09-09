@@ -50,12 +50,37 @@ class ConditionsModule(BaseModel):
     conditions: Optional[List[str]] = None
 
 
-class ProtocolSection(BaseModel):
-    # This is a placeholder, will be populated based on detailed JSON structure
-    identification_module: Optional[dict[str, Any]] = Field(
-        None, alias="identificationModule"
+class DateStruct(BaseModel):
+    date: Optional[str] = None
+    type: Optional[str] = None
+
+
+class IdentificationModule(BaseModel):
+    nct_id: str = Field(..., alias="nctId")
+    brief_title: Optional[str] = Field(None, alias="briefTitle")
+    official_title: Optional[str] = Field(None, alias="officialTitle")
+
+
+class StatusModule(BaseModel):
+    overall_status: Optional[str] = Field(None, alias="overallStatus")
+    start_date_struct: Optional[DateStruct] = Field(None, alias="startDateStruct")
+    primary_completion_date_struct: Optional[DateStruct] = Field(
+        None, alias="primaryCompletionDateStruct"
     )
-    status_module: dict[str, Any] = Field(..., alias="statusModule")
+    last_update_post_date_struct: Optional[DateStruct] = Field(
+        None, alias="lastUpdatePostDateStruct"
+    )
+
+
+class DesignModule(BaseModel):
+    study_type: Optional[str] = Field(None, alias="studyType")
+
+
+class ProtocolSection(BaseModel):
+    identification_module: IdentificationModule = Field(
+        ..., alias="identificationModule"
+    )
+    status_module: StatusModule = Field(..., alias="statusModule")
     sponsor_collaborators_module: Optional[SponsorCollaboratorsModule] = Field(
         None, alias="sponsorCollaboratorsModule"
     )
@@ -66,7 +91,7 @@ class ProtocolSection(BaseModel):
     conditions_module: Optional[ConditionsModule] = Field(
         None, alias="conditionsModule"
     )
-    design_module: Optional[dict[str, Any]] = Field(None, alias="designModule")
+    design_module: Optional[DesignModule] = Field(None, alias="designModule")
     arms_interventions_module: Optional[ArmsInterventionsModule] = Field(
         None, alias="armsInterventionsModule"
     )
@@ -81,7 +106,6 @@ class ProtocolSection(BaseModel):
 
 
 class DerivedSection(BaseModel):
-    # This is a placeholder, will be populated based on detailed JSON structure
     misc_info_module: Optional[dict[str, Any]] = Field(None, alias="miscInfoModule")
     condition_browse_module: Optional[dict[str, Any]] = Field(
         None, alias="conditionBrowseModule"
@@ -93,8 +117,8 @@ class DerivedSection(BaseModel):
 
 class Study(BaseModel):
     protocol_section: ProtocolSection = Field(..., alias="protocolSection")
-    derived_section: DerivedSection = Field(..., alias="derivedSection")
-    has_results: bool = Field(..., alias="hasResults")
+    derived_section: Optional[DerivedSection] = Field(None, alias="derivedSection")
+    has_results: Optional[bool] = Field(None, alias="hasResults")
 
 
 class APIResponse(BaseModel):
