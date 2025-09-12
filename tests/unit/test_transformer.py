@@ -1,7 +1,17 @@
 import pytest
 from datetime import datetime
+from pydantic import ValidationError
 from load_clinicaltrialsgov.transformer.transformer import Transformer
 from load_clinicaltrialsgov.models.api_models import Study
+
+MINIMAL_STUDY_PAYLOAD = {
+    "protocolSection": {
+        "identificationModule": {"nctId": "NCT00000105"},
+        "statusModule": {"overallStatus": "UNKNOWN"},
+    },
+    "derivedSection": {},
+    "hasResults": False,
+}
 
 
 def test_transform_study() -> None:
@@ -122,3 +132,59 @@ def test_transform_study_with_collaborators() -> None:
     assert start_date.year == 2022
     assert start_date.month == 1
     assert start_date.day == 1
+
+
+def test_transform_study_with_no_sponsors() -> None:
+    study = Study.model_validate(MINIMAL_STUDY_PAYLOAD)
+    transformer = Transformer()
+    transformer.transform_study(study, MINIMAL_STUDY_PAYLOAD)
+    dataframes = transformer.get_dataframes()
+    assert "sponsors" not in dataframes
+
+
+def test_transform_study_with_no_conditions() -> None:
+    study = Study.model_validate(MINIMAL_STUDY_PAYLOAD)
+    transformer = Transformer()
+    transformer.transform_study(study, MINIMAL_STUDY_PAYLOAD)
+    dataframes = transformer.get_dataframes()
+    assert "conditions" not in dataframes
+
+
+def test_transform_study_with_no_interventions() -> None:
+    study = Study.model_validate(MINIMAL_STUDY_PAYLOAD)
+    transformer = Transformer()
+    transformer.transform_study(study, MINIMAL_STUDY_PAYLOAD)
+    dataframes = transformer.get_dataframes()
+    assert "interventions" not in dataframes
+
+
+def test_transform_study_with_no_outcomes() -> None:
+    study = Study.model_validate(MINIMAL_STUDY_PAYLOAD)
+    transformer = Transformer()
+    transformer.transform_study(study, MINIMAL_STUDY_PAYLOAD)
+    dataframes = transformer.get_dataframes()
+    assert "design_outcomes" not in dataframes
+
+
+def test_transform_study_with_missing_identification_module() -> None:
+    payload = {
+        "protocolSection": {
+            "statusModule": {"overallStatus": "UNKNOWN"},
+        },
+        "derivedSection": {},
+        "hasResults": False,
+    }
+    with pytest.raises(ValidationError):
+        Study.model_validate(payload)
+
+
+def test_transform_study_with_missing_status_module() -> None:
+    payload = {
+        "protocolSection": {
+            "identificationModule": {"nctId": "NCT00000105"},
+        },
+        "derivedSection": {},
+        "hasResults": False,
+    }
+    with pytest.raises(ValidationError):
+        Study.model_validate(payload)
