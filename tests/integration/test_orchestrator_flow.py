@@ -162,3 +162,52 @@ def test_orchestrator_full_run(
         assert history[1]["records_loaded_per_table"]["studies"] == 1
         assert history[1]["records_loaded_per_table"]["raw_studies"] == 1
         assert history[1]["records_loaded_per_table"]["conditions"] == 1
+
+
+def test_orchestrator_full_run_complex(
+    db_connector: PostgresConnector,
+) -> None:
+    """
+    Tests the full end-to-end ETL flow using the orchestrator with a complex payload.
+    """
+    import json
+
+    # Arrange
+    with open("tests/integration/NCT04267848_complex.json") as f:
+        study_payload = json.load(f)
+
+    mock_client = create_autospec(APIClient)
+    mock_client.get_all_studies.return_value = iter([study_payload])
+    transformer = Transformer()
+    orchestrator = Orchestrator(
+        connector=db_connector, api_client=mock_client, transformer=transformer
+    )
+
+    # Act
+    orchestrator.run_etl(load_type="full")
+
+    # Assert
+    with db_connector.conn.cursor() as cur:
+        # Check for the successfully processed study
+        cur.execute("SELECT COUNT(*) FROM studies")
+        studies_count = cur.fetchone()
+        assert studies_count is not None
+        assert studies_count[0] == 1
+
+        # Check for sponsors
+        cur.execute("SELECT COUNT(*) FROM sponsors")
+        sponsors_count = cur.fetchone()
+        assert sponsors_count is not None
+        assert sponsors_count[0] == 3
+
+        # Check for interventions
+        cur.execute("SELECT COUNT(*) FROM interventions")
+        interventions_count = cur.fetchone()
+        assert interventions_count is not None
+        assert interventions_count[0] > 0
+
+        # Check for outcomes
+        cur.execute("SELECT COUNT(*) FROM design_outcomes")
+        outcomes_count = cur.fetchone()
+        assert outcomes_count is not None
+        assert outcomes_count[0] > 0

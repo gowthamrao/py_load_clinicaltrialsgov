@@ -1,5 +1,5 @@
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import ValidationError
 from load_clinicaltrialsgov.transformer.transformer import Transformer
 from load_clinicaltrialsgov.models.api_models import Study
@@ -72,12 +72,12 @@ def test_transform_study() -> None:
 @pytest.mark.parametrize(
     ("date_str", "expected_date"),
     [
-        ("2023-05-15", datetime(2023, 5, 15)),
-        ("2023-07", datetime(2023, 7, 1)),
-        ("February 2024", datetime(2024, 2, 1)),
-        ("2025", datetime(2025, 1, 1)),
-        ("Jan 2023", datetime(2023, 1, 1)),
-        ("2023/10/26", datetime(2023, 10, 26)),
+        ("2023-05-15", datetime(2023, 5, 15, tzinfo=timezone.utc)),
+        ("2023-07", datetime(2023, 7, 1, tzinfo=timezone.utc)),
+        ("February 2024", datetime(2024, 2, 1, tzinfo=timezone.utc)),
+        ("2025", datetime(2025, 1, 1, tzinfo=timezone.utc)),
+        ("Jan 2023", datetime(2023, 1, 1, tzinfo=timezone.utc)),
+        ("2023/10/26", datetime(2023, 10, 26, tzinfo=timezone.utc)),
         ("invalid-date", None),
         (None, None),
         ("", None),

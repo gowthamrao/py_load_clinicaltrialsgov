@@ -182,7 +182,10 @@ class Transformer:
         if not date_str:
             return None
         try:
-            return date_parse(date_str, default=datetime(1, 1, 1))
+            dt = date_parse(date_str, default=datetime(1, 1, 1))
+            if dt.tzinfo is None:
+                return dt.replace(tzinfo=UTC)
+            return dt.astimezone(UTC)
         except (ParserError, TypeError):
             logger.warning("unparseable_date_string", date_string=date_str)
             return None
