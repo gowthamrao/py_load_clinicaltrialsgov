@@ -14,6 +14,7 @@ from alembic.config import Config
 from alembic import command
 
 
+import time
 from typing import Generator, cast
 
 
@@ -22,6 +23,7 @@ def postgres_container() -> Generator[PostgresContainer, None, None]:
     # Use a public ECR mirror to avoid Docker Hub rate limits in CI
     image_name = "public.ecr.aws/bitnami/postgresql:15"
     with PostgresContainer(image_name, driver=None) as container:
+        time.sleep(5)
         original_dsn = settings.db.dsn
 
         # The plain DSN for the application
