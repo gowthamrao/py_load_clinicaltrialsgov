@@ -29,6 +29,149 @@ def mock_transformer() -> MagicMock:
     return MagicMock()
 
 
+import pandas as pd
+from load_clinicaltrialsgov.models.api_models import Study
+
+
+def test_run_command_successful_full_load(
+    mock_connector: MagicMock,
+    mock_api_client: MagicMock,
+    mock_transformer: MagicMock,
+) -> None:
+    """
+    Verify a successful full ETL run.
+    """
+    # Arrange
+    study_payload = {
+        "protocolSection": {
+            "identificationModule": {"nctId": "NCT12345678"},
+            "statusModule": {"overallStatus": "COMPLETED"},
+        }
+    }
+    # Use a real DataFrame
+    df = pd.DataFrame([{"nct_id": "NCT12345678"}])
+    transformed_data = {"studies": df}
+
+    mock_api_client.get_all_studies.return_value = iter([study_payload])
+    mock_transformer.transform_study.return_value = None  # transform_study doesn't return anything
+    mock_transformer.get_dataframes.return_value = transformed_data
+
+    with (
+        patch("load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector),
+        patch("load_clinicaltrialsgov.cli.APIClient", return_value=mock_api_client),
+        patch("load_clinicaltrialsgov.cli.Transformer", return_value=mock_transformer),
+    ):
+        # Act
+        result = runner.invoke(app, ["run", "--load-type", "full"])
+
+        # Assert
+        assert result.exit_code == 0
+        mock_api_client.get_all_studies.assert_called_once()
+
+        # Verify that transform_study was called with a Study object
+        mock_transformer.transform_study.assert_called_once()
+        call_args, _ = mock_transformer.transform_study.call_args
+        assert isinstance(call_args[0], Study)
+        assert call_args[1] == study_payload
+
+        mock_connector.bulk_load_staging.assert_called_once_with("studies", df)
+        mock_connector.record_load_history.assert_called_once()
+        assert mock_connector.record_load_history.call_args[0][0] == "SUCCESS"
+
+
+def test_run_command_successful_delta_load(
+    mock_connector: MagicMock,
+    mock_api_client: MagicMock,
+    mock_transformer: MagicMock,
+) -> None:
+    """
+    Verify a successful delta ETL run.
+    """
+    # Arrange
+    from datetime import datetime
+
+    last_load_timestamp = datetime(2023, 1, 1, 0, 0, 0)
+    mock_connector.get_last_successful_load_timestamp.return_value = (
+        last_load_timestamp
+    )
+
+    study_payload = {
+        "protocolSection": {
+            "identificationModule": {"nctId": "NCT12345678"},
+            "statusModule": {"overallStatus": "COMPLETED"},
+        }
+    }
+    df = pd.DataFrame([{"nct_id": "NCT12345678"}])
+    transformed_data = {"studies": df}
+
+    mock_api_client.get_all_studies.return_value = iter([study_payload])
+    mock_transformer.get_dataframes.return_value = transformed_data
+
+    with (
+        patch("load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector),
+        patch("load_clinicaltrialsgov.cli.APIClient", return_value=mock_api_client),
+        patch("load_clinicaltrialsgov.cli.Transformer", return_value=mock_transformer),
+    ):
+        # Act
+        result = runner.invoke(app, ["run", "--load-type", "delta"])
+
+        # Assert
+        assert result.exit_code == 0
+        mock_api_client.get_all_studies.assert_called_once_with(
+            updated_since=last_load_timestamp
+        )
+        mock_connector.record_load_history.assert_called_once()
+        assert mock_connector.record_load_history.call_args[0][0] == "SUCCESS"
+
+
+import httpx
+
+
+def test_run_command_api_error(
+    mock_connector: MagicMock,
+    mock_api_client: MagicMock,
+    mock_transformer: MagicMock,
+) -> None:
+    """
+    Verify that an API error during the ETL is handled gracefully.
+    """
+    # Arrange
+    mock_api_client.get_all_studies.side_effect = httpx.RequestError(
+        "API is down", request=MagicMock()
+    )
+
+    with (
+        patch("load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector),
+        patch("load_clinicaltrialsgov.cli.APIClient", return_value=mock_api_client),
+        patch("load_clinicaltrialsgov.cli.Transformer", return_value=mock_transformer),
+    ):
+        # Act
+        result = runner.invoke(app, ["run"])
+
+        # Assert
+        assert result.exit_code == 0
+        mock_connector.record_load_history.assert_called_once()
+        assert mock_connector.record_load_history.call_args[0][0] == "FAILURE"
+        assert "API is down" in mock_connector.record_load_history.call_args[0][1]['error']
+
+
+def test_run_command_with_connector_option() -> None:
+    """
+    Verify that the --connector option is passed to the get_connector function.
+    """
+    with patch("load_clinicaltrialsgov.cli.get_connector") as mock_get_connector:
+        # To prevent the rest of the command from running, we can make the
+        # mock throw an exception. We'll catch it to prevent test failure.
+        mock_get_connector.side_effect = ValueError("stop execution")
+
+        result = runner.invoke(app, ["run", "--connector-name", "my-test-connector"])
+
+        # Assert that get_connector was called with the correct argument
+        mock_get_connector.assert_called_once_with("my-test-connector")
+        assert isinstance(result.exception, ValueError)
+        assert str(result.exception) == "stop execution"
+
+
 def test_run_command_sends_invalid_study_to_dlq(
     mock_connector: MagicMock,
     mock_api_client: MagicMock,
