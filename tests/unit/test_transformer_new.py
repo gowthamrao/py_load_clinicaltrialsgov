@@ -235,3 +235,39 @@ def test_normalize_date_edge_cases(
     date_str: str | None, expected_date: datetime | None, transformer: Transformer
 ) -> None:
     assert transformer._normalize_date(date_str) == expected_date
+
+
+def test_transform_interventions_with_empty_list(transformer: Transformer) -> None:
+    """
+    Test that transformation succeeds when the interventions list is empty.
+    """
+    study_payload = MINIMAL_STUDY_PAYLOAD.copy()
+    study_payload["protocolSection"]["armsInterventionsModule"] = {"interventions": []}
+    study = Study.model_validate(study_payload)
+    transformer.transform_study(study, study_payload)
+    dfs = transformer.get_dataframes()
+    assert "interventions" not in dfs
+
+
+def test_transform_with_unexpected_field(transformer: Transformer) -> None:
+    """
+    Test that transformation succeeds even when there is an unexpected field in the payload.
+    """
+    study_payload = MINIMAL_STUDY_PAYLOAD.copy()
+    study_payload["protocolSection"]["identificationModule"]["someNewField"] = "some value"
+    study = Study.model_validate(study_payload)
+    transformer.transform_study(study, study_payload)
+    dfs = transformer.get_dataframes()
+    assert dfs is not None
+
+
+def test_transform_module_with_null_value(transformer: Transformer) -> None:
+    """
+    Test that transformation succeeds when a module is present but has a null value.
+    """
+    study_payload = MINIMAL_STUDY_PAYLOAD.copy()
+    study_payload["protocolSection"]["armsInterventionsModule"] = None
+    study = Study.model_validate(study_payload)
+    transformer.transform_study(study, study_payload)
+    dfs = transformer.get_dataframes()
+    assert "interventions" not in dfs
