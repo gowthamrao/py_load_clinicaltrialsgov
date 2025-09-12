@@ -168,3 +168,45 @@ def test_fetch_page_does_not_retry_on_non_retryable_errors(
     assert excinfo.value.response.status_code == non_retryable_status_code
     # Crucially, assert that the request was only made once
     assert transport.call_count == 1
+
+
+import tenacity
+from tenacity import stop_after_attempt
+
+def test_fetch_page_gives_up_after_max_attempts() -> None:
+    # Arrange
+    max_attempts = 3
+    responses: List[Tuple[int, dict[str, Any]] | Exception] = [
+        httpx.TimeoutException(f"timeout {i+1}") for i in range(max_attempts)
+    ]
+    transport = MockStatefulTransport(responses)
+    client = APIClient()
+    client.client = httpx.Client(transport=transport)
+
+    # The @retry decorator reads settings at import time, so we
+    # patch the retry object on the function directly for this test.
+    client._fetch_page.retry.stop = stop_after_attempt(max_attempts)
+
+    # Act & Assert
+    with pytest.raises(tenacity.RetryError):
+        client._fetch_page(params={})
+
+    # stop_after_attempt(N) will try N times in total.
+    assert transport.call_count == max_attempts
+
+
+def test_fetch_page_retries_on_connect_error() -> None:
+    # Arrange
+    responses: List[Tuple[int, dict[str, Any]] | Exception] = [
+        httpx.ConnectError("connection failed"),
+        (200, {"studies": [], "nextPageToken": None}),
+    ]
+    transport = MockStatefulTransport(responses)
+    client = APIClient()
+    client.client = httpx.Client(transport=transport)
+
+    # Act
+    client._fetch_page(params={})
+
+    # Assert
+    assert transport.call_count == 2
