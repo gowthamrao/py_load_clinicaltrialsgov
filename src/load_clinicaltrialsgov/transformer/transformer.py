@@ -166,6 +166,18 @@ class Transformer:
                     }
                 )
 
+        if module.other_outcomes:
+            for outcome in module.other_outcomes:
+                self.design_outcomes.append(
+                    {
+                        "nct_id": nct_id,
+                        "outcome_type": "OTHER",
+                        "measure": outcome.measure,
+                        "time_frame": outcome.time_frame,
+                        "description": outcome.description,
+                    }
+                )
+
         if module.secondary_outcomes:
             for outcome in module.secondary_outcomes:
                 self.design_outcomes.append(

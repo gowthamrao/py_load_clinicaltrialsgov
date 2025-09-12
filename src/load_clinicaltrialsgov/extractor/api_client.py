@@ -12,9 +12,10 @@ def _is_retryable_exception(exception: BaseException) -> bool:
     """
     Determines if an exception is retryable.
 
-    Returns True for network timeouts, 429 (rate limiting), and 5xx server errors.
+    Returns True for network timeouts, connection errors, 429 (rate limiting),
+    and 5xx server errors.
     """
-    if isinstance(exception, httpx.TimeoutException):
+    if isinstance(exception, (httpx.TimeoutException, httpx.ConnectError)):
         return True
     if isinstance(exception, httpx.HTTPStatusError):
         status_code = exception.response.status_code
