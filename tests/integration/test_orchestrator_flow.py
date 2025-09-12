@@ -1,6 +1,6 @@
 # ruff: noqa: F811
 import pytest
-from unittest.mock import MagicMock, create_autospec
+from unittest.mock import MagicMock, create_autospec, patch
 from typing import Any, cast
 
 from load_clinicaltrialsgov.connectors.postgres import PostgresConnector
@@ -211,3 +211,161 @@ def test_orchestrator_full_run_complex(
         outcomes_count = cur.fetchone()
         assert outcomes_count is not None
         assert outcomes_count[0] > 0
+
+
+def test_orchestrator_delta_load(
+    db_connector: PostgresConnector,
+) -> None:
+    """
+    Tests the delta load functionality of the orchestrator.
+    """
+    # Arrange - First run
+    initial_study = {
+        "protocolSection": {
+            "identificationModule": {"nctId": "NCT000003", "briefTitle": "Initial Study"},
+            "statusModule": {
+                "overallStatus": "COMPLETED",
+                "lastUpdatePostDateStruct": {"date": "2024-01-01"},
+            },
+        },
+        "derivedSection": {},
+        "hasResults": False,
+    }
+    mock_client_run1 = create_autospec(APIClient)
+    mock_client_run1.get_all_studies.return_value = iter([initial_study])
+    transformer1 = Transformer()
+    orchestrator1 = Orchestrator(
+        connector=db_connector, api_client=mock_client_run1, transformer=transformer1
+    )
+
+    # Act - First run
+    orchestrator1.run_etl(load_type="full")
+
+    # Assert - First run
+    with db_connector.conn.cursor() as cur:
+        cur.execute("SELECT COUNT(*) FROM studies")
+        assert cur.fetchone()[0] == 1
+        cur.execute("SELECT status, metrics FROM load_history")
+        history = cur.fetchone()
+        assert history[0] == "SUCCESS"
+        assert history[1]["records_processed"] == 1
+
+
+    # Arrange - Second run
+    updated_study = {
+        "protocolSection": {
+            "identificationModule": {"nctId": "NCT000003", "briefTitle": "Updated Study"},
+            "statusModule": {
+                "overallStatus": "COMPLETED",
+                "lastUpdatePostDateStruct": {"date": "2024-01-02"},
+            },
+        },
+        "derivedSection": {},
+        "hasResults": False,
+    }
+    new_study = {
+        "protocolSection": {
+            "identificationModule": {"nctId": "NCT000004", "briefTitle": "New Study"},
+            "statusModule": {
+                "overallStatus": "RECRUITING",
+                "lastUpdatePostDateStruct": {"date": "2024-01-03"},
+            },
+        },
+        "derivedSection": {},
+        "hasResults": False,
+    }
+    mock_client_run2 = create_autospec(APIClient)
+    mock_client_run2.get_all_studies.return_value = iter([updated_study, new_study])
+    transformer2 = Transformer()
+    orchestrator2 = Orchestrator(
+        connector=db_connector, api_client=mock_client_run2, transformer=transformer2
+    )
+
+    # Act - Second run (delta load)
+    orchestrator2.run_etl(load_type="delta")
+
+    # Assert - Second run
+    with db_connector.conn.cursor() as cur:
+        # Check that there are now two studies in the table
+        cur.execute("SELECT COUNT(*) FROM studies")
+        assert cur.fetchone()[0] == 2
+
+        # Check that the first study was updated
+        cur.execute("SELECT brief_title FROM studies WHERE nct_id = 'NCT000003'")
+        assert cur.fetchone()[0] == "Updated Study"
+
+        # Check that the new study was inserted
+        cur.execute("SELECT brief_title FROM studies WHERE nct_id = 'NCT000004'")
+        assert cur.fetchone()[0] == "New Study"
+
+        # Check the load history for the second run
+        cur.execute("SELECT status, metrics FROM load_history ORDER BY id DESC LIMIT 1")
+        history = cur.fetchone()
+        assert history[0] == "SUCCESS"
+        assert history[1]["records_processed"] == 2
+
+
+def test_orchestrator_transformation_error(
+    db_connector: PostgresConnector,
+) -> None:
+    """
+    Tests that the orchestrator correctly handles a non-validation error
+    during the transformation phase.
+    """
+    # Arrange
+    valid_study = {
+        "protocolSection": {
+            "identificationModule": {"nctId": "NCT000005", "briefTitle": "Valid Study"},
+            "statusModule": {
+                "overallStatus": "COMPLETED",
+                "lastUpdatePostDateStruct": {"date": "2024-01-01"},
+            },
+        },
+        "derivedSection": {},
+        "hasResults": False,
+    }
+    problematic_study = {
+        "protocolSection": {
+            "identificationModule": {"nctId": "NCT000006", "briefTitle": "Problematic Study"},
+            "statusModule": {
+                "overallStatus": "RECRUITING",
+                "lastUpdatePostDateStruct": {"date": "2024-01-02"},
+            },
+        },
+        "derivedSection": {},
+        "hasResults": False,
+    }
+
+    mock_client = create_autospec(APIClient)
+    mock_client.get_all_studies.return_value = iter([valid_study, problematic_study])
+
+    transformer = Transformer()
+    orchestrator = Orchestrator(
+        connector=db_connector, api_client=mock_client, transformer=transformer
+    )
+
+    # Mock the transform_study method to raise an exception for the problematic study
+    original_transform = transformer.transform_study
+    def side_effect_transform(study, payload):
+        if study.protocol_section.identification_module.nct_id == "NCT000006":
+            raise ValueError("A deliberate transformation error")
+        return original_transform(study, payload)
+
+    with patch.object(transformer, 'transform_study', side_effect=side_effect_transform):
+        # Act
+        orchestrator.run_etl(load_type="full")
+
+    # Assert
+    with db_connector.conn.cursor() as cur:
+        # Check that the valid study was processed
+        cur.execute("SELECT COUNT(*) FROM studies WHERE nct_id = 'NCT000005'")
+        assert cur.fetchone()[0] == 1
+
+        # Check that the problematic study was not processed
+        cur.execute("SELECT COUNT(*) FROM studies WHERE nct_id = 'NCT000006'")
+        assert cur.fetchone()[0] == 0
+
+        # Check that the problematic study is in the dead-letter queue
+        cur.execute("SELECT error_message FROM dead_letter_queue WHERE nct_id = 'NCT000006'")
+        error_message = cur.fetchone()[0]
+        assert "Transformation Error: A deliberate transformation error" in error_message
