@@ -2,13 +2,14 @@ import httpx
 import pytest
 from datetime import datetime
 from typing import List, Tuple, Any
+import tenacity
+from tenacity import stop_after_attempt
 
 
 from load_clinicaltrialsgov.extractor.api_client import APIClient
 from load_clinicaltrialsgov.config import settings
 
 from httpx import MockTransport, Response
-
 
 @pytest.fixture
 def mock_transport() -> MockTransport:
@@ -169,9 +170,6 @@ def test_fetch_page_does_not_retry_on_non_retryable_errors(
     # Crucially, assert that the request was only made once
     assert transport.call_count == 1
 
-
-import tenacity
-from tenacity import stop_after_attempt
 
 def test_fetch_page_gives_up_after_max_attempts() -> None:
     # Arrange

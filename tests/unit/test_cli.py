@@ -2,6 +2,9 @@ import pytest
 from unittest.mock import MagicMock, patch
 from typer.testing import CliRunner
 from typing import Any
+import pandas as pd
+import httpx
+from load_clinicaltrialsgov.models.api_models import Study
 
 from load_clinicaltrialsgov.cli import app
 
@@ -27,10 +30,6 @@ def mock_api_client() -> MagicMock:
 def mock_transformer() -> MagicMock:
     """Fixture for a mocked Transformer."""
     return MagicMock()
-
-
-import pandas as pd
-from load_clinicaltrialsgov.models.api_models import Study
 
 
 def test_run_command_successful_full_load(
@@ -122,9 +121,6 @@ def test_run_command_successful_delta_load(
         )
         mock_connector.record_load_history.assert_called_once()
         assert mock_connector.record_load_history.call_args[0][0] == "SUCCESS"
-
-
-import httpx
 
 
 def test_run_command_api_error(

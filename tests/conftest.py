@@ -45,3 +45,16 @@ def postgres_url(postgres_container: PostgresContainer) -> str:
 @pytest.fixture(scope="session")
 def test_data_dir() -> str:
     return os.path.join(os.path.dirname(__file__), "integration")
+
+
+@pytest.fixture(scope="session")
+def db_connector(
+    postgres_container: "PostgresContainer",
+) -> "DatabaseConnectorInterface":
+    from load_clinicaltrialsgov.connectors.postgres import PostgresConnector
+    from load_clinicaltrialsgov.connectors.interface import (
+        DatabaseConnectorInterface,
+    )
+    # The DSN is already set correctly by the postgres_container fixture
+    connector = PostgresConnector()
+    return connector

@@ -1,17 +1,8 @@
 import pytest
 import pandas as pd
+from testcontainers.postgres import PostgresContainer
 from load_clinicaltrialsgov.connectors.postgres import PostgresConnector
 from load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
-from load_clinicaltrialsgov.config import settings
-
-
-@pytest.fixture(scope="module")
-def db_connector(
-    postgres_container: "PostgresContainer",
-) -> DatabaseConnectorInterface:
-    # The DSN is already set correctly by the postgres_container fixture
-    connector = PostgresConnector()
-    return connector
 
 
 def test_full_etl_flow(db_connector: DatabaseConnectorInterface) -> None:
