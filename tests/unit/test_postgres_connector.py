@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import MagicMock, patch
 from load_clinicaltrialsgov.connectors.postgres import PostgresConnector
 from load_clinicaltrialsgov.config import settings

@@ -1,4 +1,3 @@
-import pytest
 from load_clinicaltrialsgov.transformer.transformer import Transformer
 from load_clinicaltrialsgov.models.api_models import Study
 

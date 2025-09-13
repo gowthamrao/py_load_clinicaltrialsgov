@@ -1,4 +1,3 @@
-import pytest
 from typer.testing import CliRunner
 from load_clinicaltrialsgov.config import settings
 import json

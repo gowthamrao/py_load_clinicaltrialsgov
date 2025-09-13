@@ -1,8 +1,6 @@
 import pytest
 import json
-from unittest.mock import MagicMock, patch
 from testcontainers.postgres import PostgresContainer
-import pandas as pd
 from load_clinicaltrialsgov.connectors.postgres import PostgresConnector
 from load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
 from load_clinicaltrialsgov.config import settings
