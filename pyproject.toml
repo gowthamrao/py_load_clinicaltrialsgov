@@ -7,7 +7,7 @@ authors = [
     { name = "Gowtham Rao", email = "rao@ohdsi.org" }
 ]
 license = "Apache-2.0"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<4.0"
 dependencies = [
     "httpx",
     "pydantic",
@@ -44,6 +44,9 @@ Source = "https://github.com/gowthamrao/py_load_clinicaltrialsgov"
 [tool.poetry]
 packages = [{include = "load_clinicaltrialsgov", from = "src"}]
 
+[tool.poetry.group.dev.dependencies]
+testcontainers = "^4.13.0"
+
 [project.optional-dependencies]
 postgres = ["psycopg[binary]"]
 dev = [
@@ -63,9 +66,6 @@ build-backend = "hatchling.build"
 [tool.ruff]
 line-length = 88
 
-[tool.mypy]
-strict = true
-ignore_missing_imports = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/load_clinicaltrialsgov"]

@@ -16,7 +16,7 @@ MINIMAL_STUDY_PAYLOAD: Dict[str, Any] = {
 }
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def transformer() -> Transformer:
     """Returns a new Transformer instance for each test."""
     return Transformer()
@@ -212,7 +212,7 @@ def test_transform_with_unicode_characters(transformer: Transformer) -> None:
     assert dfs["design_outcomes"].iloc[0]["measure"] == "Measüre with Ünicode"
 
 
-@pytest.mark.parametrize(  # type: ignore[misc]
+@pytest.mark.parametrize(
     ("date_str", "expected_date"),
     [
         # Ambiguous formats

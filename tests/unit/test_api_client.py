@@ -12,7 +12,7 @@ from load_clinicaltrialsgov.config import settings
 from httpx import MockTransport, Response
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def mock_transport() -> MockTransport:
     def handler(request: httpx.Request) -> Response:
         if "pageToken=next" in str(request.url):
@@ -66,7 +66,7 @@ def mock_transport() -> MockTransport:
     return MockTransport(handler)
 
 
-class MockStatefulTransport(MockTransport):  # type: ignore[misc]
+class MockStatefulTransport(MockTransport):
     def __init__(self, responses: List[Tuple[int, dict[str, Any]] | Exception]):
         self.responses = responses
         self.call_count = 0
@@ -99,7 +99,7 @@ def test_get_all_studies_delta_load(mock_transport: MockTransport) -> None:
     )
 
 
-@pytest.mark.parametrize(  # type: ignore[misc]
+@pytest.mark.parametrize(
     "retryable_status_code",
     [
         429,  # Too Many Requests
@@ -124,6 +124,29 @@ def test_fetch_page_retries_on_retryable_errors(retryable_status_code: int) -> N
     assert transport.call_count == 2
 
 
+from unittest.mock import MagicMock
+
+
+def test_api_call_retries_on_500() -> None:
+    # Arrange
+    responses: List[Tuple[int, dict[str, Any]] | Exception] = [
+        (500, {"error": "internal server error"})
+    ] * 5
+    transport = MockStatefulTransport(responses)
+    client = APIClient()
+    client.client = httpx.Client(transport=transport)
+    # The @retry decorator reads settings at import time, so we
+    # patch the retry object on the function directly for this test.
+    APIClient._fetch_page.retry.stop = stop_after_attempt(5)  # type: ignore[attr-defined]
+
+    # Act & Assert
+    with pytest.raises(tenacity.RetryError) as excinfo:
+        client._fetch_page(params={})
+
+    assert transport.call_count == 5
+    assert excinfo.value.last_attempt.attempt_number == 5
+
+
 def test_fetch_page_retries_on_timeout() -> None:
     # Arrange
     responses: List[Tuple[int, dict[str, Any]] | Exception] = [
@@ -141,7 +164,7 @@ def test_fetch_page_retries_on_timeout() -> None:
     assert transport.call_count == 2
 
 
-@pytest.mark.parametrize(  # type: ignore[misc]
+@pytest.mark.parametrize(
     "non_retryable_status_code",
     [
         400,  # Bad Request
@@ -184,7 +207,7 @@ def test_fetch_page_gives_up_after_max_attempts() -> None:
 
     # The @retry decorator reads settings at import time, so we
     # patch the retry object on the function directly for this test.
-    client._fetch_page.retry.stop = stop_after_attempt(max_attempts)
+    client._fetch_page.retry.stop = stop_after_attempt(max_attempts)  # type: ignore[attr-defined]
 
     # Act & Assert
     with pytest.raises(tenacity.RetryError):

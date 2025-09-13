@@ -11,7 +11,7 @@ from load_clinicaltrialsgov.orchestrator import Orchestrator
 # Fixtures are automatically discovered by pytest
 
 
-@pytest.fixture(autouse=True)  # type: ignore[misc]
+@pytest.fixture(autouse=True)
 def run_around_tests(db_connector: PostgresConnector) -> Generator[None, None, None]:
     # Truncate all tables before each test
     with db_connector.conn.cursor() as cur:
@@ -75,7 +75,7 @@ INVALID_STUDY_PAYLOAD_WITH_ID = {
 }
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def mock_api_client() -> MagicMock:
     """Mocks the APIClient to yield predefined study data."""
     mock_client = create_autospec(APIClient)
@@ -391,17 +391,23 @@ def test_orchestrator_transformation_error(
     with db_connector.conn.cursor() as cur:
         # Check that the valid study was processed
         cur.execute("SELECT COUNT(*) FROM studies WHERE nct_id = 'NCT000005'")
-        assert cur.fetchone()[0] == 1
+        count_result = cur.fetchone()
+        assert count_result is not None
+        assert count_result[0] == 1
 
         # Check that the problematic study was not processed
         cur.execute("SELECT COUNT(*) FROM studies WHERE nct_id = 'NCT000006'")
-        assert cur.fetchone()[0] == 0
+        count_result = cur.fetchone()
+        assert count_result is not None
+        assert count_result[0] == 0
 
         # Check that the problematic study is in the dead-letter queue
         cur.execute(
             "SELECT error_message FROM dead_letter_queue WHERE nct_id = 'NCT000006'"
         )
-        error_message = cur.fetchone()[0]
+        error_message_result = cur.fetchone()
+        assert error_message_result is not None
+        error_message = error_message_result[0]
         assert (
             "Transformation Error: A deliberate transformation error" in error_message
         )

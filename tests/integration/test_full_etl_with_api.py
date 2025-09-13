@@ -9,7 +9,7 @@ from load_clinicaltrialsgov.extractor.api_client import APIClient
 from load_clinicaltrialsgov.transformer.transformer import Transformer
 
 from alembic.config import Config
-from alembic import command  # type: ignore[attr-defined]
+from alembic import command
 
 
 import time
@@ -17,7 +17,7 @@ from typing import Generator, cast
 from unittest.mock import patch
 
 
-@pytest.fixture(scope="module")  # type: ignore[misc]
+@pytest.fixture(scope="module")
 def postgres_container() -> Generator[PostgresContainer, None, None]:
     # Use a public ECR mirror to avoid Docker Hub rate limits in CI
     image_name = "public.ecr.aws/bitnami/postgresql:15"
@@ -44,7 +44,7 @@ def postgres_container() -> Generator[PostgresContainer, None, None]:
         settings.db.dsn = original_dsn
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def db_connector(
     postgres_container: PostgresContainer,
 ) -> Generator[DatabaseConnectorInterface, None, None]:
@@ -54,12 +54,12 @@ def db_connector(
     connector.conn.close()
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def api_client() -> APIClient:
     return APIClient()
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def transformer() -> Transformer:
     return Transformer()
 
@@ -90,7 +90,9 @@ def test_full_etl_with_api_data(
     with pg_connector.conn.cursor() as cur:
         # Check raw_studies
         cur.execute("SELECT COUNT(*) FROM raw_studies WHERE nct_id = 'NCT04267848'")
-        assert cur.fetchone()[0] == 1
+        count_result = cur.fetchone()
+        assert count_result is not None
+        assert count_result[0] == 1
 
         # Check studies
         cur.execute(
