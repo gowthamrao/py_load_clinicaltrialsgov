@@ -3,7 +3,7 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
-from alembic import context  # type: ignore[attr-defined]
+from alembic import context
 from load_clinicaltrialsgov.config import settings
 
 # this is the Alembic Config object, which provides

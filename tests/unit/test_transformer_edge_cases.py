@@ -14,7 +14,7 @@ MINIMAL_STUDY_PAYLOAD: Dict[str, Any] = {
 }
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def transformer() -> Transformer:
     """Returns a new Transformer instance for each test."""
     return Transformer()
