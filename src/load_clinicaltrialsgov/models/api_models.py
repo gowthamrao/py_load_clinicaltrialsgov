@@ -44,6 +44,7 @@ class OutcomesModule(BaseModel):
 
 class DescriptionModule(BaseModel):
     brief_summary: Optional[str] = Field(None, alias="briefSummary")
+    detailed_description: Optional[str] = Field(None, alias="detailedDescription")
 
 
 class ConditionsModule(BaseModel):
@@ -74,6 +75,7 @@ class StatusModule(BaseModel):
 
 class DesignModule(BaseModel):
     study_type: Optional[str] = Field(None, alias="studyType")
+    phases: Optional[List[str]] = None
 
 
 class ProtocolSection(BaseModel):
