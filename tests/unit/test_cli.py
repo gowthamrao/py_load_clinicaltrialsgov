@@ -52,7 +52,9 @@ def test_run_command_successful_full_load(
     transformed_data = {"studies": df}
 
     mock_api_client.get_all_studies.return_value = iter([study_payload])
-    mock_transformer.transform_study.return_value = None  # transform_study doesn't return anything
+    mock_transformer.transform_study.return_value = (
+        None  # transform_study doesn't return anything
+    )
     mock_transformer.get_dataframes.return_value = transformed_data
 
     with (
@@ -90,9 +92,7 @@ def test_run_command_successful_delta_load(
     from datetime import datetime
 
     last_load_timestamp = datetime(2023, 1, 1, 0, 0, 0)
-    mock_connector.get_last_successful_load_timestamp.return_value = (
-        last_load_timestamp
-    )
+    mock_connector.get_last_successful_load_timestamp.return_value = last_load_timestamp
 
     study_payload = {
         "protocolSection": {
@@ -148,7 +148,9 @@ def test_run_command_api_error(
         assert result.exit_code == 0
         mock_connector.record_load_history.assert_called_once()
         assert mock_connector.record_load_history.call_args[0][0] == "FAILURE"
-        assert "API is down" in mock_connector.record_load_history.call_args[0][1]['error']
+        assert (
+            "API is down" in mock_connector.record_load_history.call_args[0][1]["error"]
+        )
 
 
 def test_run_command_with_connector_option() -> None:
@@ -178,9 +180,7 @@ def test_run_command_sends_invalid_study_to_dlq(
     """
     # Arrange
     # This payload is invalid because it's missing the 'identificationModule'
-    invalid_study_payload: dict[str, Any] = {
-        "protocolSection": {"statusModule": {}}
-    }
+    invalid_study_payload: dict[str, Any] = {"protocolSection": {"statusModule": {}}}
 
     # Configure mocks
     mock_api_client.get_all_studies.return_value = iter([invalid_study_payload])

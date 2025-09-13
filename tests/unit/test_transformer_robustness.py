@@ -9,15 +9,27 @@ def test_transform_study_with_all_outcome_types():
             "statusModule": {"overallStatus": "COMPLETED"},
             "outcomesModule": {
                 "primaryOutcomes": [
-                    {"measure": "Primary Measure 1", "timeFrame": "Time Frame 1", "description": "Desc 1"}
+                    {
+                        "measure": "Primary Measure 1",
+                        "timeFrame": "Time Frame 1",
+                        "description": "Desc 1",
+                    }
                 ],
                 "secondaryOutcomes": [
-                    {"measure": "Secondary Measure 1", "timeFrame": "Time Frame 2", "description": "Desc 2"}
+                    {
+                        "measure": "Secondary Measure 1",
+                        "timeFrame": "Time Frame 2",
+                        "description": "Desc 2",
+                    }
                 ],
                 "otherOutcomes": [
-                    {"measure": "Other Measure 1", "timeFrame": "Time Frame 3", "description": "Desc 3"}
-                ]
-            }
+                    {
+                        "measure": "Other Measure 1",
+                        "timeFrame": "Time Frame 3",
+                        "description": "Desc 3",
+                    }
+                ],
+            },
         },
         "derivedSection": {},
         "hasResults": False,
@@ -52,9 +64,9 @@ def test_transform_study_with_interventions():
             "armsInterventionsModule": {
                 "interventions": [
                     {"type": "Drug", "name": "Drug A", "description": "Desc A"},
-                    {"type": "Device", "name": "Device B", "description": "Desc B"}
+                    {"type": "Device", "name": "Device B", "description": "Desc B"},
                 ]
-            }
+            },
         },
         "derivedSection": {},
         "hasResults": False,
@@ -84,13 +96,13 @@ def test_transform_study_with_missing_optional_fields_and_empty_lists():
             "statusModule": {"overallStatus": "COMPLETED"},
             "sponsorCollaboratorsModule": {
                 "leadSponsor": {"class": "INDUSTRY", "name": "TestCorp"},
-                "collaborators": []
+                "collaborators": [],
             },
             "armsInterventionsModule": {
                 "interventions": [
                     {"type": "Drug", "name": "Drug A", "description": None}
                 ]
-            }
+            },
         },
         "derivedSection": {},
         "hasResults": False,

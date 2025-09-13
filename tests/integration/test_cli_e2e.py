@@ -10,6 +10,7 @@ runner = CliRunner()
 def test_cli_run_e2e(postgres_url, monkeypatch):
     monkeypatch.setenv("DB_DSN", postgres_url)
     from load_clinicaltrialsgov.cli import app
+
     # Arrange
     with open("tests/integration/NCT04267848.json") as f:
         study_payload = json.load(f)
@@ -19,7 +20,9 @@ def test_cli_run_e2e(postgres_url, monkeypatch):
 
     # Act
     with patch("load_clinicaltrialsgov.cli.APIClient", return_value=mock_api_client):
-        result = runner.invoke(app, ["run", "--load-type", "full", "--connector-name", "postgres"])
+        result = runner.invoke(
+            app, ["run", "--load-type", "full", "--connector-name", "postgres"]
+        )
 
     # Assert
     assert result.exit_code == 0
@@ -38,11 +41,17 @@ def test_cli_run_e2e(postgres_url, monkeypatch):
             cur.execute("SELECT COUNT(*) FROM conditions WHERE nct_id = 'NCT04267848'")
             assert cur.fetchone()[0] == 6
 
-            cur.execute("SELECT COUNT(*) FROM interventions WHERE nct_id = 'NCT04267848'")
+            cur.execute(
+                "SELECT COUNT(*) FROM interventions WHERE nct_id = 'NCT04267848'"
+            )
             assert cur.fetchone()[0] == 12
 
-            cur.execute("SELECT COUNT(*) FROM design_outcomes WHERE nct_id = 'NCT04267848'")
+            cur.execute(
+                "SELECT COUNT(*) FROM design_outcomes WHERE nct_id = 'NCT04267848'"
+            )
             assert cur.fetchone()[0] == 8
 
-            cur.execute("SELECT COUNT(*) FROM intervention_arm_groups WHERE nct_id = 'NCT04267848'")
+            cur.execute(
+                "SELECT COUNT(*) FROM intervention_arm_groups WHERE nct_id = 'NCT04267848'"
+            )
             assert cur.fetchone()[0] > 0

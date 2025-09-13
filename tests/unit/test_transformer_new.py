@@ -46,7 +46,9 @@ def test_study_model_validation_missing_nct_id():
     assert "nctId" in str(exc_info.value)
 
 
-def test_transform_study_with_missing_optional_modules(transformer: Transformer) -> None:
+def test_transform_study_with_missing_optional_modules(
+    transformer: Transformer,
+) -> None:
     """
     Test that transformation succeeds when optional modules are missing.
     """
@@ -85,10 +87,18 @@ def test_transform_outcomes(transformer: Transformer) -> None:
     study_payload = MINIMAL_STUDY_PAYLOAD.copy()
     study_payload["protocolSection"]["outcomesModule"] = {
         "primaryOutcomes": [
-            {"measure": "Primary Measure", "timeFrame": "1 year", "description": "Primary desc."}
+            {
+                "measure": "Primary Measure",
+                "timeFrame": "1 year",
+                "description": "Primary desc.",
+            }
         ],
         "secondaryOutcomes": [
-            {"measure": "Secondary Measure", "timeFrame": "2 years", "description": "Secondary desc."}
+            {
+                "measure": "Secondary Measure",
+                "timeFrame": "2 years",
+                "description": "Secondary desc.",
+            }
         ],
     }
     study = Study.model_validate(study_payload)
@@ -126,11 +136,19 @@ def test_transform_outcomes_with_nulls(transformer: Transformer) -> None:
     study_payload = MINIMAL_STUDY_PAYLOAD.copy()
     study_payload["protocolSection"]["outcomesModule"] = {
         "primaryOutcomes": [
-            {"measure": "Primary Measure", "timeFrame": "1 year", "description": "Primary desc."},
+            {
+                "measure": "Primary Measure",
+                "timeFrame": "1 year",
+                "description": "Primary desc.",
+            },
             {"measure": None, "timeFrame": "2 years", "description": "Secondary desc."},
         ],
         "secondaryOutcomes": [
-            {"measure": "Secondary Measure", "timeFrame": None, "description": "Secondary desc."},
+            {
+                "measure": "Secondary Measure",
+                "timeFrame": None,
+                "description": "Secondary desc.",
+            },
         ],
     }
     study = Study.model_validate(study_payload)
@@ -206,24 +224,20 @@ def test_transform_with_unicode_characters(transformer: Transformer) -> None:
         ("2023-01", datetime(2023, 1, 1, tzinfo=timezone.utc)),
         ("Jan 2023", datetime(2023, 1, 1, tzinfo=timezone.utc)),
         ("2023 Jan", datetime(2023, 1, 1, tzinfo=timezone.utc)),
-
         # Different separators
         ("2023.01.02", datetime(2023, 1, 2, tzinfo=timezone.utc)),
         ("2023-01-02", datetime(2023, 1, 2, tzinfo=timezone.utc)),
         ("2023/01/02", datetime(2023, 1, 2, tzinfo=timezone.utc)),
-
         # Textual months
         ("Jan 2, 2023", datetime(2023, 1, 2, tzinfo=timezone.utc)),
         ("January 2, 2023", datetime(2023, 1, 2, tzinfo=timezone.utc)),
         ("2-Jan-2023", datetime(2023, 1, 2, tzinfo=timezone.utc)),
         ("2-January-2023", datetime(2023, 1, 2, tzinfo=timezone.utc)),
-
         # With time
         ("2023-01-02T10:30:00", datetime(2023, 1, 2, 10, 30, tzinfo=timezone.utc)),
         ("2023-01-02 10:30:00", datetime(2023, 1, 2, 10, 30, tzinfo=timezone.utc)),
         ("2023-01-02 10:30 AM", datetime(2023, 1, 2, 10, 30, tzinfo=timezone.utc)),
         ("2023-01-02 10:30 PM", datetime(2023, 1, 2, 22, 30, tzinfo=timezone.utc)),
-
         # Invalid dates
         ("2023-13-01", None),
         ("2023-02-30", None),
@@ -254,7 +268,9 @@ def test_transform_with_unexpected_field(transformer: Transformer) -> None:
     Test that transformation succeeds even when there is an unexpected field in the payload.
     """
     study_payload = MINIMAL_STUDY_PAYLOAD.copy()
-    study_payload["protocolSection"]["identificationModule"]["someNewField"] = "some value"
+    study_payload["protocolSection"]["identificationModule"]["someNewField"] = (
+        "some value"
+    )
     study = Study.model_validate(study_payload)
     transformer.transform_study(study, study_payload)
     dfs = transformer.get_dataframes()
