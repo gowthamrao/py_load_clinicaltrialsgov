@@ -3,9 +3,10 @@ from datetime import datetime, timezone
 from pydantic import ValidationError
 from load_clinicaltrialsgov.models.api_models import Study
 from load_clinicaltrialsgov.transformer.transformer import Transformer
+from typing import Any, Dict
 
 # A minimal valid study payload for testing purposes
-MINIMAL_STUDY_PAYLOAD = {
+MINIMAL_STUDY_PAYLOAD: Dict[str, Any] = {
     "protocolSection": {
         "identificationModule": {"nctId": "NCT00000105"},
         "statusModule": {"overallStatus": "UNKNOWN"},
@@ -15,13 +16,13 @@ MINIMAL_STUDY_PAYLOAD = {
 }
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def transformer() -> Transformer:
     """Returns a new Transformer instance for each test."""
     return Transformer()
 
 
-def test_study_model_validation_missing_protocol_section():
+def test_study_model_validation_missing_protocol_section() -> None:
     """
     Test that Study.model_validate raises a ValidationError if protocolSection is missing.
     """
@@ -31,7 +32,7 @@ def test_study_model_validation_missing_protocol_section():
     assert "protocolSection" in str(exc_info.value)
 
 
-def test_study_model_validation_missing_nct_id():
+def test_study_model_validation_missing_nct_id() -> None:
     """
     Test that Study.model_validate raises a ValidationError if nctId is missing.
     """
@@ -65,7 +66,7 @@ def test_transform_interventions(transformer: Transformer) -> None:
     """
     Test the transformation of the interventions module.
     """
-    study_payload = MINIMAL_STUDY_PAYLOAD.copy()
+    study_payload: Dict[str, Any] = MINIMAL_STUDY_PAYLOAD.copy()
     study_payload["protocolSection"]["armsInterventionsModule"] = {
         "interventions": [
             {"type": "DRUG", "name": "TestDrug", "description": "A test drug."},
@@ -84,7 +85,7 @@ def test_transform_outcomes(transformer: Transformer) -> None:
     """
     Test the transformation of primary and secondary outcomes.
     """
-    study_payload = MINIMAL_STUDY_PAYLOAD.copy()
+    study_payload: Dict[str, Any] = MINIMAL_STUDY_PAYLOAD.copy()
     study_payload["protocolSection"]["outcomesModule"] = {
         "primaryOutcomes": [
             {
@@ -113,7 +114,7 @@ def test_transform_interventions_with_nulls(transformer: Transformer) -> None:
     """
     Test transformation of interventions with null or missing values.
     """
-    study_payload = MINIMAL_STUDY_PAYLOAD.copy()
+    study_payload: Dict[str, Any] = MINIMAL_STUDY_PAYLOAD.copy()
     study_payload["protocolSection"]["armsInterventionsModule"] = {
         "interventions": [
             {"type": "DRUG", "name": "TestDrug", "description": "A test drug."},
@@ -133,7 +134,7 @@ def test_transform_outcomes_with_nulls(transformer: Transformer) -> None:
     """
     Test transformation of outcomes with null or missing values.
     """
-    study_payload = MINIMAL_STUDY_PAYLOAD.copy()
+    study_payload: Dict[str, Any] = MINIMAL_STUDY_PAYLOAD.copy()
     study_payload["protocolSection"]["outcomesModule"] = {
         "primaryOutcomes": [
             {
@@ -211,7 +212,7 @@ def test_transform_with_unicode_characters(transformer: Transformer) -> None:
     assert dfs["design_outcomes"].iloc[0]["measure"] == "Measüre with Ünicode"
 
 
-@pytest.mark.parametrize(
+@pytest.mark.parametrize(  # type: ignore[misc]
     ("date_str", "expected_date"),
     [
         # Ambiguous formats
@@ -255,7 +256,7 @@ def test_transform_interventions_with_empty_list(transformer: Transformer) -> No
     """
     Test that transformation succeeds when the interventions list is empty.
     """
-    study_payload = MINIMAL_STUDY_PAYLOAD.copy()
+    study_payload: Dict[str, Any] = MINIMAL_STUDY_PAYLOAD.copy()
     study_payload["protocolSection"]["armsInterventionsModule"] = {"interventions": []}
     study = Study.model_validate(study_payload)
     transformer.transform_study(study, study_payload)
@@ -267,7 +268,7 @@ def test_transform_with_unexpected_field(transformer: Transformer) -> None:
     """
     Test that transformation succeeds even when there is an unexpected field in the payload.
     """
-    study_payload = MINIMAL_STUDY_PAYLOAD.copy()
+    study_payload: Dict[str, Any] = MINIMAL_STUDY_PAYLOAD.copy()
     study_payload["protocolSection"]["identificationModule"]["someNewField"] = (
         "some value"
     )
@@ -281,7 +282,7 @@ def test_transform_module_with_null_value(transformer: Transformer) -> None:
     """
     Test that transformation succeeds when a module is present but has a null value.
     """
-    study_payload = MINIMAL_STUDY_PAYLOAD.copy()
+    study_payload: Dict[str, Any] = MINIMAL_STUDY_PAYLOAD.copy()
     study_payload["protocolSection"]["armsInterventionsModule"] = None
     study = Study.model_validate(study_payload)
     transformer.transform_study(study, study_payload)

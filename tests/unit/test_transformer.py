@@ -69,7 +69,7 @@ def test_transform_study() -> None:
     assert len(dataframes["conditions"]) == 2
 
 
-@pytest.mark.parametrize(
+@pytest.mark.parametrize(  # type: ignore[misc]
     ("date_str", "expected_date"),
     [
         ("2023-05-15", datetime(2023, 5, 15, tzinfo=timezone.utc)),

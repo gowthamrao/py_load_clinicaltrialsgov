@@ -19,7 +19,10 @@ dependencies = [
     "structlog",
     "alembic",
     "SQLAlchemy",
-    "python-dateutil (>=2.9.0.post0,<3.0.0)"
+    "python-dateutil (>=2.9.0.post0,<3.0.0)",
+    "types-sqlalchemy (>=1.4.53.38,<2.0.0.0)",
+    "types-python-dateutil (>=2.9.0.20250822,<3.0.0.0)",
+    "psycopg[binary] (>=3.2.10,<4.0.0)"
 ]
 classifiers = [
     "Development Status :: 4 - Beta",

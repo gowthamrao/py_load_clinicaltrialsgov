@@ -18,7 +18,7 @@ def _is_retryable_exception(exception: BaseException) -> bool:
     if isinstance(exception, (httpx.TimeoutException, httpx.ConnectError)):
         return True
     if isinstance(exception, httpx.HTTPStatusError):
-        status_code = exception.response.status_code
+        status_code = cast(int, exception.response.status_code)
         return status_code == 429 or 500 <= status_code < 600
     return False
 
@@ -34,7 +34,7 @@ class APIClient:
             limits=httpx.Limits(max_connections=5, max_keepalive_connections=5),
         )
 
-    @retry(
+    @retry(  # type: ignore[misc]
         stop=stop_after_attempt(settings.api.max_retries),
         wait=wait_exponential(multiplier=1, min=1, max=10),
         retry=retry_if_exception(_is_retryable_exception),

@@ -5,7 +5,7 @@ from load_clinicaltrialsgov.transformer.transformer import Transformer
 from load_clinicaltrialsgov.models.api_models import Study
 
 
-def test_transform_study_with_invalid_data():
+def test_transform_study_with_invalid_data() -> None:
     """
     Verify that transform_study raises a ValidationError when given invalid data.
     """
@@ -29,7 +29,7 @@ def test_transform_study_with_invalid_data():
         Study.model_validate(invalid_study_data)
 
 
-def test_transform_study_with_missing_data():
+def test_transform_study_with_missing_data() -> None:
     """
     Verify that transform_study can handle missing non-required data.
     """

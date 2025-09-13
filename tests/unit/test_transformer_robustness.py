@@ -2,7 +2,7 @@ from load_clinicaltrialsgov.transformer.transformer import Transformer
 from load_clinicaltrialsgov.models.api_models import Study
 
 
-def test_transform_study_with_all_outcome_types():
+def test_transform_study_with_all_outcome_types() -> None:
     mock_study_data = {
         "protocolSection": {
             "identificationModule": {"nctId": "NCT12345"},
@@ -56,7 +56,7 @@ def test_transform_study_with_all_outcome_types():
     assert other_outcome.iloc[0]["measure"] == "Other Measure 1"
 
 
-def test_transform_study_with_interventions():
+def test_transform_study_with_interventions() -> None:
     mock_study_data = {
         "protocolSection": {
             "identificationModule": {"nctId": "NCT12345"},
@@ -89,7 +89,7 @@ def test_transform_study_with_interventions():
     assert device_intervention.iloc[0]["intervention_type"] == "Device"
 
 
-def test_transform_study_with_missing_optional_fields_and_empty_lists():
+def test_transform_study_with_missing_optional_fields_and_empty_lists() -> None:
     mock_study_data = {
         "protocolSection": {
             "identificationModule": {"nctId": "NCT12345"},
@@ -124,7 +124,7 @@ def test_transform_study_with_missing_optional_fields_and_empty_lists():
     assert interventions_df.iloc[0]["description"] is None
 
 
-def test_transform_study_with_unicode_characters():
+def test_transform_study_with_unicode_characters() -> None:
     mock_study_data = {
         "protocolSection": {
             "identificationModule": {

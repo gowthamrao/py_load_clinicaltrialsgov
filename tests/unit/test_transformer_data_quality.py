@@ -2,7 +2,7 @@ from load_clinicaltrialsgov.transformer.transformer import Transformer
 from load_clinicaltrialsgov.models.api_models import Study
 
 
-def test_transform_study_with_junk_sponsor_name():
+def test_transform_study_with_junk_sponsor_name() -> None:
     mock_study_data = {
         "protocolSection": {
             "identificationModule": {"nctId": "NCT12345"},
@@ -26,7 +26,7 @@ def test_transform_study_with_junk_sponsor_name():
     assert dataframes["sponsors"].iloc[0]["name"] == "Clinical Development Manager"
 
 
-def test_transform_study_with_prefixed_sponsor_name():
+def test_transform_study_with_prefixed_sponsor_name() -> None:
     mock_study_data = {
         "protocolSection": {
             "identificationModule": {"nctId": "NCT12345"},
@@ -47,7 +47,7 @@ def test_transform_study_with_prefixed_sponsor_name():
     assert dataframes["sponsors"].iloc[0]["name"] == "Dr. John Doe"
 
 
-def test_transform_study_with_missing_sponsor_module():
+def test_transform_study_with_missing_sponsor_module() -> None:
     mock_study_data = {
         "protocolSection": {
             "identificationModule": {"nctId": "NCT12345"},
@@ -64,7 +64,7 @@ def test_transform_study_with_missing_sponsor_module():
     assert "sponsors" not in dataframes
 
 
-def test_transform_study_with_missing_dates():
+def test_transform_study_with_missing_dates() -> None:
     mock_study_data = {
         "protocolSection": {
             "identificationModule": {"nctId": "NCT12345"},
