@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 import pytest
 from sqlalchemy import create_engine, inspect
 from load_clinicaltrialsgov.cli import app
@@ -8,9 +9,13 @@ from unittest.mock import patch, create_autospec
 from load_clinicaltrialsgov.extractor.api_client import APIClient
 
 
+from unittest.mock import MagicMock
+
 @pytest.mark.integration
-@patch("load_clinicaltrialsgov.orchestrator.APIClient")
-def test_database_schema_validation(mock_api_client, postgres_url, test_data_dir):
+@patch("load_clinicaltrialsgov.orchestrator.APIClient")  # type: ignore[misc]
+def test_database_schema_validation(
+    mock_api_client: MagicMock, postgres_url: str, test_data_dir: str
+) -> None:
     """
     Test that the database schema is created correctly after a full ETL run.
     """

@@ -12,7 +12,7 @@ from load_clinicaltrialsgov.cli import app
 runner = CliRunner()
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def mock_connector() -> MagicMock:
     """Fixture for a mocked DatabaseConnectorInterface."""
     connector = MagicMock()
@@ -20,13 +20,13 @@ def mock_connector() -> MagicMock:
     return connector
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def mock_api_client() -> MagicMock:
     """Fixture for a mocked APIClient."""
     return MagicMock()
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def mock_transformer() -> MagicMock:
     """Fixture for a mocked Transformer."""
     return MagicMock()

@@ -2,66 +2,66 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Any
 
 
-class ArmGroup(BaseModel):
+class ArmGroup(BaseModel):  # type: ignore[misc]
     label: Optional[str] = None
     type: Optional[str] = None
     description: Optional[str] = None
 
 
-class Intervention(BaseModel):
+class Intervention(BaseModel):  # type: ignore[misc]
     type: Optional[str] = None
     name: Optional[str] = None
     description: Optional[str] = None
     arm_group_labels: Optional[List[str]] = Field(None, alias="armGroupLabels")
 
 
-class ArmsInterventionsModule(BaseModel):
+class ArmsInterventionsModule(BaseModel):  # type: ignore[misc]
     arm_groups: Optional[List[ArmGroup]] = Field(None, alias="armGroups")
     interventions: Optional[List[Intervention]] = None
 
 
-class Outcome(BaseModel):
+class Outcome(BaseModel):  # type: ignore[misc]
     measure: Optional[str] = None
     description: Optional[str] = None
     time_frame: Optional[str] = Field(None, alias="timeFrame")
 
 
-class Sponsor(BaseModel):
+class Sponsor(BaseModel):  # type: ignore[misc]
     name: Optional[str] = None
     class_details: Optional[str] = Field(None, alias="class")
 
 
-class SponsorCollaboratorsModule(BaseModel):
+class SponsorCollaboratorsModule(BaseModel):  # type: ignore[misc]
     lead_sponsor: Optional[Sponsor] = Field(None, alias="leadSponsor")
     collaborators: Optional[List[Sponsor]] = None
 
 
-class OutcomesModule(BaseModel):
+class OutcomesModule(BaseModel):  # type: ignore[misc]
     primary_outcomes: Optional[List[Outcome]] = Field(None, alias="primaryOutcomes")
     secondary_outcomes: Optional[List[Outcome]] = Field(None, alias="secondaryOutcomes")
     other_outcomes: Optional[List[Outcome]] = Field(None, alias="otherOutcomes")
 
 
-class DescriptionModule(BaseModel):
+class DescriptionModule(BaseModel):  # type: ignore[misc]
     brief_summary: Optional[str] = Field(None, alias="briefSummary")
 
 
-class ConditionsModule(BaseModel):
+class ConditionsModule(BaseModel):  # type: ignore[misc]
     conditions: Optional[List[str]] = None
 
 
-class DateStruct(BaseModel):
+class DateStruct(BaseModel):  # type: ignore[misc]
     date: Optional[str] = None
     type: Optional[str] = None
 
 
-class IdentificationModule(BaseModel):
+class IdentificationModule(BaseModel):  # type: ignore[misc]
     nct_id: str = Field(..., alias="nctId")
     brief_title: Optional[str] = Field(None, alias="briefTitle")
     official_title: Optional[str] = Field(None, alias="officialTitle")
 
 
-class StatusModule(BaseModel):
+class StatusModule(BaseModel):  # type: ignore[misc]
     overall_status: Optional[str] = Field(None, alias="overallStatus")
     start_date_struct: Optional[DateStruct] = Field(None, alias="startDateStruct")
     primary_completion_date_struct: Optional[DateStruct] = Field(
@@ -72,11 +72,11 @@ class StatusModule(BaseModel):
     )
 
 
-class DesignModule(BaseModel):
+class DesignModule(BaseModel):  # type: ignore[misc]
     study_type: Optional[str] = Field(None, alias="studyType")
 
 
-class ProtocolSection(BaseModel):
+class ProtocolSection(BaseModel):  # type: ignore[misc]
     identification_module: IdentificationModule = Field(
         ..., alias="identificationModule"
     )
@@ -105,7 +105,7 @@ class ProtocolSection(BaseModel):
     references_module: Optional[dict[str, Any]] = Field(None, alias="referencesModule")
 
 
-class DerivedSection(BaseModel):
+class DerivedSection(BaseModel):  # type: ignore[misc]
     misc_info_module: Optional[dict[str, Any]] = Field(None, alias="miscInfoModule")
     condition_browse_module: Optional[dict[str, Any]] = Field(
         None, alias="conditionBrowseModule"
@@ -115,12 +115,12 @@ class DerivedSection(BaseModel):
     )
 
 
-class Study(BaseModel):
+class Study(BaseModel):  # type: ignore[misc]
     protocol_section: ProtocolSection = Field(..., alias="protocolSection")
     derived_section: Optional[DerivedSection] = Field(None, alias="derivedSection")
     has_results: Optional[bool] = Field(None, alias="hasResults")
 
 
-class APIResponse(BaseModel):
+class APIResponse(BaseModel):  # type: ignore[misc]
     studies: List[Study]
     next_page_token: Optional[str] = Field(None, alias="nextPageToken")

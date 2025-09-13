@@ -9,14 +9,15 @@ from load_clinicaltrialsgov.extractor.api_client import APIClient
 from load_clinicaltrialsgov.transformer.transformer import Transformer
 
 from alembic.config import Config
-from alembic import command
+from alembic import command  # type: ignore[attr-defined]
 
 
 import time
 from typing import Generator, cast
+from unittest.mock import patch
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="module")  # type: ignore[misc]
 def postgres_container() -> Generator[PostgresContainer, None, None]:
     # Use a public ECR mirror to avoid Docker Hub rate limits in CI
     image_name = "public.ecr.aws/bitnami/postgresql:15"
@@ -43,7 +44,7 @@ def postgres_container() -> Generator[PostgresContainer, None, None]:
         settings.db.dsn = original_dsn
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def db_connector(
     postgres_container: PostgresContainer,
 ) -> Generator[DatabaseConnectorInterface, None, None]:
@@ -53,12 +54,12 @@ def db_connector(
     connector.conn.close()
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def api_client() -> APIClient:
     return APIClient()
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def transformer() -> Transformer:
     return Transformer()
 
@@ -76,14 +77,13 @@ def test_full_etl_with_api_data(
         study_data = json.load(f)
 
     # Mock the API client to return the test data
-    def mock_get_all_studies(*args, **kwargs):
-        yield study_data
-
-    api_client.get_all_studies = mock_get_all_studies
-
-    # Run the ETL
-    orchestrator = Orchestrator(db_connector, api_client, transformer)
-    orchestrator.run_etl(load_type="full")
+    with patch(
+        "load_clinicaltrialsgov.extractor.api_client.APIClient.get_all_studies",
+        return_value=iter([study_data]),
+    ):
+        # Run the ETL
+        orchestrator = Orchestrator(db_connector, api_client, transformer)
+        orchestrator.run_etl(load_type="full")
 
     # Verify the data was loaded correctly
     pg_connector = cast(PostgresConnector, db_connector)

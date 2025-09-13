@@ -1,7 +1,7 @@
 # ruff: noqa: F811
 import pytest
 from unittest.mock import MagicMock, create_autospec, patch
-from typing import Any, cast
+from typing import Any, cast, Generator
 
 from load_clinicaltrialsgov.connectors.postgres import PostgresConnector
 from load_clinicaltrialsgov.extractor.api_client import APIClient
@@ -11,8 +11,8 @@ from load_clinicaltrialsgov.orchestrator import Orchestrator
 # Fixtures are automatically discovered by pytest
 
 
-@pytest.fixture(autouse=True)
-def run_around_tests(db_connector: PostgresConnector):
+@pytest.fixture(autouse=True)  # type: ignore[misc]
+def run_around_tests(db_connector: PostgresConnector) -> Generator[None, None, None]:
     # Truncate all tables before each test
     with db_connector.conn.cursor() as cur:
         cur.execute(
@@ -75,7 +75,7 @@ INVALID_STUDY_PAYLOAD_WITH_ID = {
 }
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def mock_api_client() -> MagicMock:
     """Mocks the APIClient to yield predefined study data."""
     mock_client = create_autospec(APIClient)
@@ -258,9 +258,12 @@ def test_orchestrator_delta_load(
     # Assert - First run
     with db_connector.conn.cursor() as cur:
         cur.execute("SELECT COUNT(*) FROM studies")
-        assert cur.fetchone()[0] == 1
+        studies_count = cur.fetchone()
+        assert studies_count is not None
+        assert studies_count[0] == 1
         cur.execute("SELECT status, metrics FROM load_history")
         history = cur.fetchone()
+        assert history is not None
         assert history[0] == "SUCCESS"
         assert history[1]["records_processed"] == 1
 
@@ -304,19 +307,26 @@ def test_orchestrator_delta_load(
     with db_connector.conn.cursor() as cur:
         # Check that there are now two studies in the table
         cur.execute("SELECT COUNT(*) FROM studies")
-        assert cur.fetchone()[0] == 2
+        studies_count = cur.fetchone()
+        assert studies_count is not None
+        assert studies_count[0] == 2
 
         # Check that the first study was updated
         cur.execute("SELECT brief_title FROM studies WHERE nct_id = 'NCT000003'")
-        assert cur.fetchone()[0] == "Updated Study"
+        study_title = cur.fetchone()
+        assert study_title is not None
+        assert study_title[0] == "Updated Study"
 
         # Check that the new study was inserted
         cur.execute("SELECT brief_title FROM studies WHERE nct_id = 'NCT000004'")
-        assert cur.fetchone()[0] == "New Study"
+        new_study_title = cur.fetchone()
+        assert new_study_title is not None
+        assert new_study_title[0] == "New Study"
 
         # Check the load history for the second run
         cur.execute("SELECT status, metrics FROM load_history ORDER BY id DESC LIMIT 1")
         history = cur.fetchone()
+        assert history is not None
         assert history[0] == "SUCCESS"
         assert history[1]["records_processed"] == 2
 
@@ -366,7 +376,7 @@ def test_orchestrator_transformation_error(
     # Mock the transform_study method to raise an exception for the problematic study
     original_transform = transformer.transform_study
 
-    def side_effect_transform(study, payload):
+    def side_effect_transform(study: Any, payload: Any) -> None:
         if study.protocol_section.identification_module.nct_id == "NCT000006":
             raise ValueError("A deliberate transformation error")
         return original_transform(study, payload)

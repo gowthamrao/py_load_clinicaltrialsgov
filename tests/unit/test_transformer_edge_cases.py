@@ -1,9 +1,10 @@
 import pytest
 from load_clinicaltrialsgov.transformer.transformer import Transformer
 from load_clinicaltrialsgov.models.api_models import Study
+from typing import Any, Dict
 
 # A minimal valid study payload for testing purposes
-MINIMAL_STUDY_PAYLOAD = {
+MINIMAL_STUDY_PAYLOAD: Dict[str, Any] = {
     "protocolSection": {
         "identificationModule": {"nctId": "NCT00000105"},
         "statusModule": {"overallStatus": "UNKNOWN"},
@@ -13,7 +14,7 @@ MINIMAL_STUDY_PAYLOAD = {
 }
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def transformer() -> Transformer:
     """Returns a new Transformer instance for each test."""
     return Transformer()
@@ -23,7 +24,7 @@ def test_transform_study_with_many_interventions(transformer: Transformer) -> No
     """
     Test transformation of a study with a large number of interventions.
     """
-    study_payload = MINIMAL_STUDY_PAYLOAD.copy()
+    study_payload: Dict[str, Any] = MINIMAL_STUDY_PAYLOAD.copy()
     num_interventions = 100
     interventions = [
         {"type": "DRUG", "name": f"TestDrug {i}", "description": f"A test drug {i}."}
@@ -42,7 +43,7 @@ def test_transform_study_with_long_strings(transformer: Transformer) -> None:
     """
     Test transformation of a study with very long string values.
     """
-    study_payload = MINIMAL_STUDY_PAYLOAD.copy()
+    study_payload: Dict[str, Any] = MINIMAL_STUDY_PAYLOAD.copy()
     long_string = "a" * 10000
     study_payload["protocolSection"]["identificationModule"]["briefTitle"] = long_string
     study_payload["protocolSection"]["conditionsModule"] = {"conditions": [long_string]}
@@ -58,7 +59,7 @@ def test_transform_handles_nulls_in_child_records(transformer: Transformer) -> N
     """
     Test that the transformer correctly handles records with null values in child tables.
     """
-    study_payload = MINIMAL_STUDY_PAYLOAD.copy()
+    study_payload: Dict[str, Any] = MINIMAL_STUDY_PAYLOAD.copy()
     study_payload["protocolSection"]["armsInterventionsModule"] = {
         "interventions": [
             {"type": "DRUG", "name": "TestDrug", "description": "A test drug."},

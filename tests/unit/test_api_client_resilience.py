@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 from load_clinicaltrialsgov.extractor.api_client import APIClient
 
 
-def test_fetch_page_retries_on_retryable_exception():
+def test_fetch_page_retries_on_retryable_exception() -> None:
     """
     Verify that _fetch_page retries on retryable exceptions.
     """
@@ -23,7 +23,7 @@ def test_fetch_page_retries_on_retryable_exception():
         assert mock_get.call_count == 3
 
 
-def test_fetch_page_does_not_retry_on_non_retryable_exception():
+def test_fetch_page_does_not_retry_on_non_retryable_exception() -> None:
     """
     Verify that _fetch_page does not retry on non-retryable exceptions.
     """
