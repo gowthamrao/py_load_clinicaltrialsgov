@@ -1,7 +1,7 @@
 import pandas as pd
 import json
 import structlog
-from typing import Dict, List, Any, cast
+from typing import Dict, List, Any
 from load_clinicaltrialsgov.models.api_models import Study
 from datetime import datetime, UTC
 from dateutil.parser import parse as date_parse, ParserError
