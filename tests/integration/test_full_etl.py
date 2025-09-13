@@ -16,10 +16,14 @@ def test_full_etl_flow(db_connector: DatabaseConnectorInterface) -> None:
 
     # 1. Initial Load
     raw_studies_df = pd.DataFrame(
-        [
-            ("NCT00000123", None, None, None, "{}")
+        [("NCT00000123", None, None, None, "{}")],
+        columns=[
+            "nct_id",
+            "last_updated_api",
+            "last_updated_api_str",
+            "ingestion_timestamp",
+            "payload",
         ],
-        columns=["nct_id", "last_updated_api", "last_updated_api_str", "ingestion_timestamp", "payload"],
     )
     studies_columns = [
         "nct_id",

@@ -11,6 +11,7 @@ from load_clinicaltrialsgov.config import settings
 
 from httpx import MockTransport, Response
 
+
 @pytest.fixture
 def mock_transport() -> MockTransport:
     def handler(request: httpx.Request) -> Response:
@@ -175,7 +176,7 @@ def test_fetch_page_gives_up_after_max_attempts() -> None:
     # Arrange
     max_attempts = 3
     responses: List[Tuple[int, dict[str, Any]] | Exception] = [
-        httpx.TimeoutException(f"timeout {i+1}") for i in range(max_attempts)
+        httpx.TimeoutException(f"timeout {i + 1}") for i in range(max_attempts)
     ]
     transport = MockStatefulTransport(responses)
     client = APIClient()

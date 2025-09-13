@@ -45,9 +45,7 @@ def test_transform_study_with_long_strings(transformer: Transformer) -> None:
     study_payload = MINIMAL_STUDY_PAYLOAD.copy()
     long_string = "a" * 10000
     study_payload["protocolSection"]["identificationModule"]["briefTitle"] = long_string
-    study_payload["protocolSection"]["conditionsModule"] = {
-        "conditions": [long_string]
-    }
+    study_payload["protocolSection"]["conditionsModule"] = {"conditions": [long_string]}
     study = Study.model_validate(study_payload)
     transformer.transform_study(study, study_payload)
     dfs = transformer.get_dataframes()
@@ -70,7 +68,11 @@ def test_transform_handles_nulls_in_child_records(transformer: Transformer) -> N
     }
     study_payload["protocolSection"]["outcomesModule"] = {
         "primaryOutcomes": [
-            {"measure": "Primary Measure", "timeFrame": "1 year", "description": "Primary desc."},
+            {
+                "measure": "Primary Measure",
+                "timeFrame": "1 year",
+                "description": "Primary desc.",
+            },
             {"measure": None, "timeFrame": "2 years", "description": "Secondary desc."},
         ],
     }

@@ -15,7 +15,9 @@ from load_clinicaltrialsgov.orchestrator import Orchestrator
 def run_around_tests(db_connector: PostgresConnector):
     # Truncate all tables before each test
     with db_connector.conn.cursor() as cur:
-        cur.execute("TRUNCATE TABLE studies, sponsors, conditions, interventions, intervention_arm_groups, design_outcomes, raw_studies, dead_letter_queue, load_history RESTART IDENTITY")
+        cur.execute(
+            "TRUNCATE TABLE studies, sponsors, conditions, interventions, intervention_arm_groups, design_outcomes, raw_studies, dead_letter_queue, load_history RESTART IDENTITY"
+        )
     db_connector.conn.commit()
     yield
     # No cleanup needed after
@@ -231,7 +233,10 @@ def test_orchestrator_delta_load(
     # Arrange - First run
     initial_study = {
         "protocolSection": {
-            "identificationModule": {"nctId": "NCT000003", "briefTitle": "Initial Study"},
+            "identificationModule": {
+                "nctId": "NCT000003",
+                "briefTitle": "Initial Study",
+            },
             "statusModule": {
                 "overallStatus": "COMPLETED",
                 "lastUpdatePostDateStruct": {"date": "2024-01-01"},
@@ -259,11 +264,13 @@ def test_orchestrator_delta_load(
         assert history[0] == "SUCCESS"
         assert history[1]["records_processed"] == 1
 
-
     # Arrange - Second run
     updated_study = {
         "protocolSection": {
-            "identificationModule": {"nctId": "NCT000003", "briefTitle": "Updated Study"},
+            "identificationModule": {
+                "nctId": "NCT000003",
+                "briefTitle": "Updated Study",
+            },
             "statusModule": {
                 "overallStatus": "COMPLETED",
                 "lastUpdatePostDateStruct": {"date": "2024-01-02"},
@@ -335,7 +342,10 @@ def test_orchestrator_transformation_error(
     }
     problematic_study = {
         "protocolSection": {
-            "identificationModule": {"nctId": "NCT000006", "briefTitle": "Problematic Study"},
+            "identificationModule": {
+                "nctId": "NCT000006",
+                "briefTitle": "Problematic Study",
+            },
             "statusModule": {
                 "overallStatus": "RECRUITING",
                 "lastUpdatePostDateStruct": {"date": "2024-01-02"},
@@ -355,12 +365,15 @@ def test_orchestrator_transformation_error(
 
     # Mock the transform_study method to raise an exception for the problematic study
     original_transform = transformer.transform_study
+
     def side_effect_transform(study, payload):
         if study.protocol_section.identification_module.nct_id == "NCT000006":
             raise ValueError("A deliberate transformation error")
         return original_transform(study, payload)
 
-    with patch.object(transformer, 'transform_study', side_effect=side_effect_transform):
+    with patch.object(
+        transformer, "transform_study", side_effect=side_effect_transform
+    ):
         # Act
         orchestrator.run_etl(load_type="full")
 
@@ -375,6 +388,10 @@ def test_orchestrator_transformation_error(
         assert cur.fetchone()[0] == 0
 
         # Check that the problematic study is in the dead-letter queue
-        cur.execute("SELECT error_message FROM dead_letter_queue WHERE nct_id = 'NCT000006'")
+        cur.execute(
+            "SELECT error_message FROM dead_letter_queue WHERE nct_id = 'NCT000006'"
+        )
         error_message = cur.fetchone()[0]
-        assert "Transformation Error: A deliberate transformation error" in error_message
+        assert (
+            "Transformation Error: A deliberate transformation error" in error_message
+        )
