@@ -1,13 +1,11 @@
 from typer.testing import CliRunner
+from pytest import MonkeyPatch
 from load_clinicaltrialsgov.config import settings
 import json
 from unittest.mock import patch, MagicMock
 import psycopg
 
 runner = CliRunner()
-
-
-from pytest import MonkeyPatch
 
 
 def test_cli_run_e2e(postgres_url: str, monkeypatch: MonkeyPatch) -> None:
