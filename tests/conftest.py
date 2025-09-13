@@ -6,6 +6,7 @@ from load_clinicaltrialsgov.config import settings
 from alembic.config import Config
 from alembic import command
 from typing import Generator
+from load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
 
 
 @pytest.fixture(scope="session")
@@ -50,11 +51,8 @@ def test_data_dir() -> str:
 @pytest.fixture(scope="session")
 def db_connector(
     postgres_container: "PostgresContainer",
-) -> "DatabaseConnectorInterface":
+) -> DatabaseConnectorInterface:
     from load_clinicaltrialsgov.connectors.postgres import PostgresConnector
-    from load_clinicaltrialsgov.connectors.interface import (
-        DatabaseConnectorInterface,
-    )
     # The DSN is already set correctly by the postgres_container fixture
     connector = PostgresConnector()
     return connector
