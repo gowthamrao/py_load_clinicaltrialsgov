@@ -10,9 +10,7 @@ from load_clinicaltrialsgov.extractor.api_client import APIClient
 
 @pytest.mark.integration
 @patch("load_clinicaltrialsgov.orchestrator.APIClient")
-def test_database_schema_validation(
-    mock_api_client, postgres_url, test_data_dir
-):
+def test_database_schema_validation(mock_api_client, postgres_url, test_data_dir):
     """
     Test that the database schema is created correctly after a full ETL run.
     """
@@ -59,22 +57,48 @@ def test_database_schema_validation(
 
         # Check the columns and types for a few key tables
         # studies table
-        studies_columns = {c["name"]: c["type"].__class__.__name__ for c in inspector.get_columns("studies")}
+        studies_columns = {
+            c["name"]: c["type"].__class__.__name__
+            for c in inspector.get_columns("studies")
+        }
         assert "nct_id" in studies_columns and studies_columns["nct_id"] == "VARCHAR"
-        assert "brief_title" in studies_columns and studies_columns["brief_title"] == "TEXT"
-        assert "start_date" in studies_columns and studies_columns["start_date"] == "DATE"
-        assert "primary_completion_date" in studies_columns and studies_columns["primary_completion_date"] == "DATE"
+        assert (
+            "brief_title" in studies_columns
+            and studies_columns["brief_title"] == "TEXT"
+        )
+        assert (
+            "start_date" in studies_columns and studies_columns["start_date"] == "DATE"
+        )
+        assert (
+            "primary_completion_date" in studies_columns
+            and studies_columns["primary_completion_date"] == "DATE"
+        )
 
         # sponsors table
-        sponsors_columns = {c["name"]: c["type"].__class__.__name__ for c in inspector.get_columns("sponsors")}
+        sponsors_columns = {
+            c["name"]: c["type"].__class__.__name__
+            for c in inspector.get_columns("sponsors")
+        }
         assert "nct_id" in sponsors_columns and sponsors_columns["nct_id"] == "VARCHAR"
         assert "name" in sponsors_columns and sponsors_columns["name"] == "TEXT"
-        assert "agency_class" in sponsors_columns and sponsors_columns["agency_class"] == "VARCHAR"
-        assert "is_lead" in sponsors_columns and sponsors_columns["is_lead"] == "BOOLEAN"
+        assert (
+            "agency_class" in sponsors_columns
+            and sponsors_columns["agency_class"] == "VARCHAR"
+        )
+        assert (
+            "is_lead" in sponsors_columns and sponsors_columns["is_lead"] == "BOOLEAN"
+        )
 
         # Check foreign key constraints
         studies_fkeys = inspector.get_foreign_keys("studies")
-        assert any(fk["referred_table"] == "raw_studies" and fk["referred_columns"] == ["nct_id"] for fk in studies_fkeys)
+        assert any(
+            fk["referred_table"] == "raw_studies"
+            and fk["referred_columns"] == ["nct_id"]
+            for fk in studies_fkeys
+        )
 
         sponsors_fkeys = inspector.get_foreign_keys("sponsors")
-        assert any(fk["referred_table"] == "studies" and fk["referred_columns"] == ["nct_id"] for fk in sponsors_fkeys)
+        assert any(
+            fk["referred_table"] == "studies" and fk["referred_columns"] == ["nct_id"]
+            for fk in sponsors_fkeys
+        )

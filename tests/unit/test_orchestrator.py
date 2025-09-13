@@ -100,7 +100,9 @@ class TestOrchestrator(unittest.TestCase):
         3.  Record the failure in the load history.
         """
         # Arrange: API client will yield one valid study
-        self.mock_api_client.get_all_studies.return_value = iter([self.valid_study_dict])
+        self.mock_api_client.get_all_studies.return_value = iter(
+            [self.valid_study_dict]
+        )
 
         # Arrange: The transformer will return a mock dataframe
         mock_df = MagicMock()
@@ -109,7 +111,9 @@ class TestOrchestrator(unittest.TestCase):
         self.mock_transformer.clear.return_value = None
 
         # Arrange: The connector will raise an exception on bulk_load_staging
-        self.mock_connector.bulk_load_staging.side_effect = Exception("Database is on fire")
+        self.mock_connector.bulk_load_staging.side_effect = Exception(
+            "Database is on fire"
+        )
 
         # Act
         self.orchestrator.run_etl(load_type="full")
@@ -123,7 +127,8 @@ class TestOrchestrator(unittest.TestCase):
 
         # 2. The failure was recorded in the load history
         self.mock_connector.record_load_history.assert_called_once_with(
-            "FAILURE", {"error": "Database is on fire", "duration_seconds": unittest.mock.ANY}
+            "FAILURE",
+            {"error": "Database is on fire", "duration_seconds": unittest.mock.ANY},
         )
 
     def test_orchestrator_handles_api_error(self) -> None:
@@ -187,7 +192,9 @@ class TestOrchestrator(unittest.TestCase):
         Verify that the orchestrator can handle an iterator with only invalid studies.
         """
         # Arrange: API client will yield only an invalid study
-        self.mock_api_client.get_all_studies.return_value = iter([self.invalid_study_dict])
+        self.mock_api_client.get_all_studies.return_value = iter(
+            [self.invalid_study_dict]
+        )
 
         # Act
         self.orchestrator.run_etl(load_type="full")
@@ -243,7 +250,9 @@ class TestOrchestrator(unittest.TestCase):
         self.mock_connector.record_failed_study.assert_called_once()
         _, kwargs = self.mock_connector.record_failed_study.call_args
         self.assertEqual(kwargs["nct_id"], "NCT00000001")
-        self.assertIn("Transformation Error: Transformer exploded", kwargs["error_message"])
+        self.assertIn(
+            "Transformation Error: Transformer exploded", kwargs["error_message"]
+        )
 
         # 3. The transaction was successfully committed
         self.mock_connector.manage_transaction.assert_has_calls(

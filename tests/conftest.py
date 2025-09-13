@@ -53,6 +53,7 @@ def db_connector(
     postgres_container: "PostgresContainer",
 ) -> DatabaseConnectorInterface:
     from load_clinicaltrialsgov.connectors.postgres import PostgresConnector
+
     # The DSN is already set correctly by the postgres_container fixture
     connector = PostgresConnector()
     return connector

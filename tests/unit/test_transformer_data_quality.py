@@ -8,7 +8,10 @@ def test_transform_study_with_junk_sponsor_name():
             "identificationModule": {"nctId": "NCT12345"},
             "statusModule": {"overallStatus": "COMPLETED"},
             "sponsorCollaboratorsModule": {
-                "leadSponsor": {"class": "INDUSTRY", "name": "Clinical Development Manager"}
+                "leadSponsor": {
+                    "class": "INDUSTRY",
+                    "name": "Clinical Development Manager",
+                }
             },
         },
         "derivedSection": {},

@@ -83,9 +83,7 @@ def test_transform_study() -> None:
         ("", None),
     ],
 )
-def test_normalize_date(
-    date_str: str | None, expected_date: datetime | None
-) -> None:
+def test_normalize_date(date_str: str | None, expected_date: datetime | None) -> None:
     transformer = Transformer()
     assert transformer._normalize_date(date_str) == expected_date
 

@@ -63,7 +63,11 @@ def transformer() -> Transformer:
     return Transformer()
 
 
-def test_full_etl_with_api_data(db_connector: DatabaseConnectorInterface, api_client: APIClient, transformer: Transformer) -> None:
+def test_full_etl_with_api_data(
+    db_connector: DatabaseConnectorInterface,
+    api_client: APIClient,
+    transformer: Transformer,
+) -> None:
     """
     Tests the full ETL flow using a real API response from a file.
     """
@@ -89,7 +93,9 @@ def test_full_etl_with_api_data(db_connector: DatabaseConnectorInterface, api_cl
         assert cur.fetchone()[0] == 1
 
         # Check studies
-        cur.execute("SELECT brief_title, study_type FROM studies WHERE nct_id = 'NCT04267848'")
+        cur.execute(
+            "SELECT brief_title, study_type FROM studies WHERE nct_id = 'NCT04267848'"
+        )
         study_result = cur.fetchone()
         assert study_result is not None
         assert "Immunotherapy" in study_result[0]
@@ -109,14 +115,18 @@ def test_full_etl_with_api_data(db_connector: DatabaseConnectorInterface, api_cl
         assert "Lung Non-Small Cell Carcinoma" in conditions
 
         # Check interventions
-        cur.execute("SELECT name, intervention_type FROM interventions WHERE nct_id = 'NCT04267848'")
+        cur.execute(
+            "SELECT name, intervention_type FROM interventions WHERE nct_id = 'NCT04267848'"
+        )
         interventions = cur.fetchall()
         assert len(interventions) > 0
         intervention_names = [row[0] for row in interventions]
         assert "Pembrolizumab" in intervention_names
 
         # Check design_outcomes
-        cur.execute("SELECT measure, outcome_type FROM design_outcomes WHERE nct_id = 'NCT04267848'")
+        cur.execute(
+            "SELECT measure, outcome_type FROM design_outcomes WHERE nct_id = 'NCT04267848'"
+        )
         outcomes = cur.fetchall()
         assert len(outcomes) > 0
         primary_outcomes = [o for o in outcomes if o[1] == "PRIMARY"]

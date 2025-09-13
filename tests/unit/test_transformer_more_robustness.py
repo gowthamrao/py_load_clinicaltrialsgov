@@ -4,14 +4,16 @@ from load_clinicaltrialsgov.models.api_models import Study
 
 
 def test_transform_study_with_empty_input():
-    study = Study.model_validate({
-        "protocolSection": {
-            "identificationModule": {"nctId": "NCT00000000"},
-            "statusModule": {"overallStatus": "UNKNOWN"},
-        },
-        "derivedSection": {},
-        "hasResults": False,
-    })
+    study = Study.model_validate(
+        {
+            "protocolSection": {
+                "identificationModule": {"nctId": "NCT00000000"},
+                "statusModule": {"overallStatus": "UNKNOWN"},
+            },
+            "derivedSection": {},
+            "hasResults": False,
+        }
+    )
     transformer = Transformer()
     transformer.transform_study(study, {})
     dataframes = transformer.get_dataframes()
@@ -20,9 +22,7 @@ def test_transform_study_with_empty_input():
 
 def test_transform_study_with_missing_required_fields():
     mock_study_data = {
-        "protocolSection": {
-            "statusModule": {"overallStatus": "COMPLETED"}
-        },
+        "protocolSection": {"statusModule": {"overallStatus": "COMPLETED"}},
         "derivedSection": {},
         "hasResults": False,
     }
