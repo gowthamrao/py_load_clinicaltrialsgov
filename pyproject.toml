@@ -38,6 +38,9 @@ keywords = ["clinicaltrials.gov", "etl", "api", "ohdsi"]
 Homepage = "https://github.com/gowthamrao/py_load_clinicaltrialsgov"
 Source = "https://github.com/gowthamrao/py_load_clinicaltrialsgov"
 
+[tool.poetry]
+packages = [{include = "load_clinicaltrialsgov", from = "src"}]
+
 [project.optional-dependencies]
 postgres = ["psycopg[binary]"]
 dev = [
