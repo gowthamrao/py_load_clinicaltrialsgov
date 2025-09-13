@@ -6,7 +6,7 @@ import sys
 import json
 from typing import Any
 from alembic.config import Config
-from alembic import command
+from alembic import command  # type: ignore[attr-defined]
 
 from load_clinicaltrialsgov.connectors.postgres import PostgresConnector
 from load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
@@ -42,7 +42,7 @@ def get_connector(name: str) -> DatabaseConnectorInterface:
     raise ValueError(f"Unsupported connector: {name}")
 
 
-@app.command()
+@app.command()  # type: ignore[misc]
 def run(
     load_type: Annotated[
         str, typer.Option(help="Type of load: 'full' or 'delta'.")
@@ -64,7 +64,7 @@ def run(
     orchestrator.run_etl(load_type=load_type)
 
 
-@app.command()
+@app.command()  # type: ignore[misc]
 def init_db(
     connector_name: Annotated[
         str, typer.Option(help="Name of the database connector to use.")
@@ -105,7 +105,7 @@ def init_db(
         raise typer.Exit(code=1)
 
 
-@app.command()
+@app.command()  # type: ignore[misc]
 def migrate_db(
     revision: Annotated[str, typer.Option(help="The revision to upgrade to.")] = "head",
 ) -> None:
@@ -130,7 +130,7 @@ def _print_history(title: str, history: dict[str, Any]) -> None:
     typer.echo(json.dumps(history["metrics"], indent=4))
 
 
-@app.command()
+@app.command()  # type: ignore[misc]
 def status(
     connector_name: Annotated[
         str, typer.Option(help="Name of the database connector to use.")

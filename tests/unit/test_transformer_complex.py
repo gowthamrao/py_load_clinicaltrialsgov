@@ -3,7 +3,7 @@ from load_clinicaltrialsgov.models.api_models import Study
 from load_clinicaltrialsgov.transformer.transformer import Transformer
 
 
-def test_transform_complex_study():
+def test_transform_complex_study() -> None:
     # Load the complex study from the JSON file
     with open("tests/integration/NCT04267848_complex.json") as f:
         study_data = json.load(f)

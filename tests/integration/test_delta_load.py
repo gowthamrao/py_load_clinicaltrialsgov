@@ -66,7 +66,7 @@ UPDATED_STUDY_PAYLOAD = {
 }
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def mock_api_client_full_load() -> MagicMock:
     """Mocks the APIClient to yield predefined study data for the full load."""
     mock_client = create_autospec(APIClient)
@@ -78,7 +78,7 @@ def mock_api_client_full_load() -> MagicMock:
     return cast(MagicMock, mock_client)
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def mock_api_client_delta_load() -> MagicMock:
     """Mocks the APIClient to yield predefined study data for the delta load."""
     mock_client = create_autospec(APIClient)

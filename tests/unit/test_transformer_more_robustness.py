@@ -3,7 +3,7 @@ from load_clinicaltrialsgov.transformer.transformer import Transformer
 from load_clinicaltrialsgov.models.api_models import Study
 
 
-def test_transform_study_with_empty_input():
+def test_transform_study_with_empty_input() -> None:
     study = Study.model_validate(
         {
             "protocolSection": {
@@ -20,7 +20,7 @@ def test_transform_study_with_empty_input():
     assert dataframes is not None
 
 
-def test_transform_study_with_missing_required_fields():
+def test_transform_study_with_missing_required_fields() -> None:
     mock_study_data = {
         "protocolSection": {"statusModule": {"overallStatus": "COMPLETED"}},
         "derivedSection": {},
@@ -30,7 +30,7 @@ def test_transform_study_with_missing_required_fields():
         Study.model_validate(mock_study_data)
 
 
-def test_transform_study_with_large_strings():
+def test_transform_study_with_large_strings() -> None:
     large_string = "a" * 10000
     mock_study_data = {
         "protocolSection": {

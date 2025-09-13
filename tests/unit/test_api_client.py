@@ -12,7 +12,7 @@ from load_clinicaltrialsgov.config import settings
 from httpx import MockTransport, Response
 
 
-@pytest.fixture
+@pytest.fixture  # type: ignore[misc]
 def mock_transport() -> MockTransport:
     def handler(request: httpx.Request) -> Response:
         if "pageToken=next" in str(request.url):
@@ -66,7 +66,7 @@ def mock_transport() -> MockTransport:
     return MockTransport(handler)
 
 
-class MockStatefulTransport(MockTransport):
+class MockStatefulTransport(MockTransport):  # type: ignore[misc]
     def __init__(self, responses: List[Tuple[int, dict[str, Any]] | Exception]):
         self.responses = responses
         self.call_count = 0
@@ -99,7 +99,7 @@ def test_get_all_studies_delta_load(mock_transport: MockTransport) -> None:
     )
 
 
-@pytest.mark.parametrize(
+@pytest.mark.parametrize(  # type: ignore[misc]
     "retryable_status_code",
     [
         429,  # Too Many Requests
@@ -141,7 +141,7 @@ def test_fetch_page_retries_on_timeout() -> None:
     assert transport.call_count == 2
 
 
-@pytest.mark.parametrize(
+@pytest.mark.parametrize(  # type: ignore[misc]
     "non_retryable_status_code",
     [
         400,  # Bad Request
