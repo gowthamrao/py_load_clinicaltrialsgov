@@ -41,10 +41,14 @@ jobs:
         run: ruff format --check .
 
       - name: Run static type checker
-        run: mypy .
+        run: |
+          source .venv/bin/activate
+          mypy .
 
       - name: Run tests
-        run: pytest
+        run: |
+          source .venv/bin/activate
+          pytest
 
   build-and-push:
     runs-on: ubuntu-latest
