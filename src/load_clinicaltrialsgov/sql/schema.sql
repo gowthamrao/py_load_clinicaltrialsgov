@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS raw_studies (
 );
 
 CREATE TABLE IF NOT EXISTS studies (
-    nct_id VARCHAR(255) PRIMARY KEY,
+    nct_id VARCHAR(255) PRIMARY KEY REFERENCES raw_studies(nct_id) ON DELETE CASCADE,
     brief_title TEXT,
     official_title TEXT,
     overall_status VARCHAR(255),
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS studies (
 
 CREATE TABLE IF NOT EXISTS sponsors (
     id SERIAL PRIMARY KEY,
-    nct_id VARCHAR(255) NOT NULL,
+    nct_id VARCHAR(255) NOT NULL REFERENCES studies(nct_id) ON DELETE CASCADE,
     agency_class VARCHAR(255),
     name TEXT,
     is_lead BOOLEAN,
@@ -31,7 +31,7 @@ CREATE INDEX IF NOT EXISTS idx_sponsors_nct_id ON sponsors(nct_id);
 
 CREATE TABLE IF NOT EXISTS conditions (
     id SERIAL PRIMARY KEY,
-    nct_id VARCHAR(255) NOT NULL,
+    nct_id VARCHAR(255) NOT NULL REFERENCES studies(nct_id) ON DELETE CASCADE,
     name TEXT,
     CONSTRAINT uq_conditions_natural_key UNIQUE (nct_id, name)
 );
@@ -39,7 +39,7 @@ CREATE INDEX IF NOT EXISTS idx_conditions_nct_id ON conditions(nct_id);
 
 CREATE TABLE IF NOT EXISTS interventions (
     id SERIAL PRIMARY KEY,
-    nct_id VARCHAR(255) NOT NULL,
+    nct_id VARCHAR(255) NOT NULL REFERENCES studies(nct_id) ON DELETE CASCADE,
     intervention_type VARCHAR(255),
     name TEXT,
     description TEXT,
@@ -47,9 +47,18 @@ CREATE TABLE IF NOT EXISTS interventions (
 );
 CREATE INDEX IF NOT EXISTS idx_interventions_nct_id ON interventions(nct_id);
 
+CREATE TABLE IF NOT EXISTS intervention_arm_groups (
+    id SERIAL PRIMARY KEY,
+    nct_id VARCHAR(255) NOT NULL REFERENCES studies(nct_id) ON DELETE CASCADE,
+    intervention_name TEXT,
+    arm_group_label TEXT,
+    CONSTRAINT uq_intervention_arm_groups_natural_key UNIQUE (nct_id, intervention_name, arm_group_label)
+);
+CREATE INDEX IF NOT EXISTS idx_intervention_arm_groups_nct_id ON intervention_arm_groups(nct_id);
+
 CREATE TABLE IF NOT EXISTS design_outcomes (
     id SERIAL PRIMARY KEY,
-    nct_id VARCHAR(255) NOT NULL,
+    nct_id VARCHAR(255) NOT NULL REFERENCES studies(nct_id) ON DELETE CASCADE,
     outcome_type VARCHAR(255),
     measure TEXT,
     time_frame TEXT,
@@ -114,6 +123,12 @@ CREATE UNLOGGED TABLE IF NOT EXISTS staging_interventions (
     intervention_type VARCHAR(255),
     name TEXT,
     description TEXT
+);
+
+CREATE UNLOGGED TABLE IF NOT EXISTS staging_intervention_arm_groups (
+    nct_id VARCHAR(255),
+    intervention_name TEXT,
+    arm_group_label TEXT
 );
 
 CREATE UNLOGGED TABLE IF NOT EXISTS staging_design_outcomes (

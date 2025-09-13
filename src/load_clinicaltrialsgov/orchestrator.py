@@ -24,6 +24,7 @@ class Orchestrator:
         "sponsors": ["nct_id", "name", "agency_class"],
         "conditions": ["nct_id", "name"],
         "interventions": ["nct_id", "intervention_type", "name"],
+        "intervention_arm_groups": ["nct_id", "intervention_name", "arm_group_label"],
         "design_outcomes": ["nct_id", "outcome_type", "measure"],
     }
 
