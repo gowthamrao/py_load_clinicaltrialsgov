@@ -4,12 +4,12 @@ import time
 from testcontainers.postgres import PostgresContainer
 from load_clinicaltrialsgov.config import settings
 from alembic.config import Config
-from alembic import command  # type: ignore[attr-defined]
+from alembic import command
 from typing import Generator, cast
 from load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
 
 
-@pytest.fixture(scope="session")  # type: ignore[misc]
+@pytest.fixture(scope="session")
 def postgres_container() -> Generator[PostgresContainer, None, None]:
     # Use a public ECR mirror to avoid Docker Hub rate limits in CI
     image_name = "public.ecr.aws/bitnami/postgresql:15"
@@ -36,19 +36,19 @@ def postgres_container() -> Generator[PostgresContainer, None, None]:
         settings.db.dsn = original_dsn
 
 
-@pytest.fixture(scope="session")  # type: ignore[misc]
+@pytest.fixture(scope="session")
 def postgres_url(postgres_container: PostgresContainer) -> str:
     return cast(str, postgres_container.get_connection_url()).replace(
         "postgresql://", "postgresql+psycopg://"
     )
 
 
-@pytest.fixture(scope="session")  # type: ignore[misc]
+@pytest.fixture(scope="session")
 def test_data_dir() -> str:
     return os.path.join(os.path.dirname(__file__), "integration")
 
 
-@pytest.fixture(scope="session")  # type: ignore[misc]
+@pytest.fixture(scope="session")
 def db_connector(
     postgres_container: "PostgresContainer",
 ) -> DatabaseConnectorInterface:

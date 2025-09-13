@@ -8,7 +8,7 @@ Create Date: 2025-09-07 22:43:44.428771
 
 from typing import Sequence, Union
 
-from alembic import op  # type: ignore[attr-defined]
+from alembic import op
 import importlib.resources
 from load_clinicaltrialsgov import sql
 

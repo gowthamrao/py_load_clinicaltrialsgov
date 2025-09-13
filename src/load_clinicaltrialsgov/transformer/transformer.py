@@ -4,7 +4,7 @@ import structlog
 from typing import Dict, List, Any, cast
 from load_clinicaltrialsgov.models.api_models import Study
 from datetime import datetime, UTC
-from dateutil.parser import parse as date_parse, ParserError  # type: ignore[import-untyped]
+from dateutil.parser import parse as date_parse, ParserError
 
 logger = structlog.get_logger(__name__)
 
@@ -212,7 +212,7 @@ class Transformer:
         if not date_str:
             return None
         try:
-            dt = cast(datetime, date_parse(date_str, default=datetime(1, 1, 1)))
+            dt = date_parse(date_str, default=datetime(1, 1, 1))
             if dt.tzinfo is None:
                 return dt.replace(tzinfo=UTC)
             return dt.astimezone(UTC)
