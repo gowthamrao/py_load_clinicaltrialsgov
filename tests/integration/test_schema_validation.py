@@ -42,7 +42,7 @@ def test_database_schema_validation(
 
     engine = create_engine(postgres_url)
     inspector = inspect(engine)
-    with engine.connect() as connection:
+    with engine.connect() as _:
         # Check that all expected tables are created
         expected_tables = [
             "raw_studies",

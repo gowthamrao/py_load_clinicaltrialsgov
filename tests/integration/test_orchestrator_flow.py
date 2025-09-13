@@ -8,8 +8,7 @@ from load_clinicaltrialsgov.extractor.api_client import APIClient
 from load_clinicaltrialsgov.transformer.transformer import Transformer
 from load_clinicaltrialsgov.orchestrator import Orchestrator
 
-# Import fixtures from the other test file
-from .test_full_etl import db_connector # noqa: F401
+# Fixtures are automatically discovered by pytest
 
 
 @pytest.fixture(autouse=True)
