@@ -11,6 +11,7 @@ from load_clinicaltrialsgov.extractor.api_client import APIClient
 
 from unittest.mock import MagicMock
 
+
 @pytest.mark.integration
 @patch("load_clinicaltrialsgov.orchestrator.APIClient")  # type: ignore[misc]
 def test_database_schema_validation(
