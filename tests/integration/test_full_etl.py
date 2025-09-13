@@ -1,6 +1,4 @@
-import pytest
 import pandas as pd
-from testcontainers.postgres import PostgresContainer
 from load_clinicaltrialsgov.connectors.postgres import PostgresConnector
 from load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
 
