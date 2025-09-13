@@ -1,47 +1,13 @@
 import pytest
-import time
-from testcontainers.postgres import PostgresContainer
 import pandas as pd
 from load_clinicaltrialsgov.connectors.postgres import PostgresConnector
 from load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
 from load_clinicaltrialsgov.config import settings
 
-from alembic.config import Config
-from alembic import command
-
-
-from typing import Generator
-
-
-@pytest.fixture(scope="module")
-def postgres_container() -> Generator[PostgresContainer, None, None]:
-    # Use a public ECR mirror to avoid Docker Hub rate limits in CI
-    image_name = "public.ecr.aws/bitnami/postgresql:15"
-    with PostgresContainer(image_name, driver=None) as container:
-        time.sleep(5)
-        original_dsn = settings.db.dsn
-
-        # The plain DSN for the application
-        app_dsn = container.get_connection_url()
-        # The DSN with the correct dialect for Alembic/SQLAlchemy
-        alembic_dsn = app_dsn.replace("postgresql://", "postgresql+psycopg://")
-
-        # Set DSN for Alembic and run migrations
-        settings.db.dsn = alembic_dsn
-        alembic_cfg = Config("alembic.ini")
-        command.upgrade(alembic_cfg, "head")
-
-        # Set DSN for the application to use
-        settings.db.dsn = app_dsn
-        yield container
-
-        # Restore original DSN after tests
-        settings.db.dsn = original_dsn
-
 
 @pytest.fixture(scope="module")
 def db_connector(
-    postgres_container: PostgresContainer,
+    postgres_container: "PostgresContainer",
 ) -> DatabaseConnectorInterface:
     # The DSN is already set correctly by the postgres_container fixture
     connector = PostgresConnector()
@@ -60,6 +26,12 @@ def test_full_etl_flow(db_connector: DatabaseConnectorInterface) -> None:
     pg_connector = cast(PostgresConnector, db_connector)
 
     # 1. Initial Load
+    raw_studies_df = pd.DataFrame(
+        [
+            ("NCT00000123", None, None, None, "{}")
+        ],
+        columns=["nct_id", "last_updated_api", "last_updated_api_str", "ingestion_timestamp", "payload"],
+    )
     studies_columns = [
         "nct_id",
         "brief_title",
@@ -118,6 +90,8 @@ def test_full_etl_flow(db_connector: DatabaseConnectorInterface) -> None:
     )
 
     # Load initial data
+    db_connector.bulk_load_staging("raw_studies", raw_studies_df)
+    db_connector.execute_merge("raw_studies", primary_keys=["nct_id"])
     db_connector.bulk_load_staging("studies", studies_df)
     db_connector.execute_merge("studies", primary_keys=["nct_id"])
     db_connector.bulk_load_staging("interventions", interventions_df)

@@ -9,7 +9,17 @@ from load_clinicaltrialsgov.transformer.transformer import Transformer
 from load_clinicaltrialsgov.orchestrator import Orchestrator
 
 # Import fixtures from the other test file
-from .test_full_etl import db_connector, postgres_container  # noqa: F401
+from .test_full_etl import db_connector # noqa: F401
+
+
+@pytest.fixture(autouse=True)
+def run_around_tests(db_connector: PostgresConnector):
+    # Truncate all tables before each test
+    with db_connector.conn.cursor() as cur:
+        cur.execute("TRUNCATE TABLE studies, sponsors, conditions, interventions, intervention_arm_groups, design_outcomes, raw_studies, dead_letter_queue, load_history RESTART IDENTITY")
+    db_connector.conn.commit()
+    yield
+    # No cleanup needed after
 
 
 # A valid study record that should process successfully

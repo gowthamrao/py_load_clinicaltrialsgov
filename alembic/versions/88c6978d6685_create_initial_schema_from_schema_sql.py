@@ -33,6 +33,7 @@ def downgrade() -> None:
     Drops all tables.
     """
     op.execute("DROP TABLE IF EXISTS staging_design_outcomes;")
+    op.execute("DROP TABLE IF EXISTS staging_intervention_arm_groups;")
     op.execute("DROP TABLE IF EXISTS staging_interventions;")
     op.execute("DROP TABLE IF EXISTS staging_conditions;")
     op.execute("DROP TABLE IF EXISTS staging_sponsors;")
@@ -41,6 +42,7 @@ def downgrade() -> None:
     op.execute("DROP TABLE IF EXISTS load_history;")
     op.execute("DROP TABLE IF EXISTS dead_letter_queue;")
     op.execute("DROP TABLE IF EXISTS design_outcomes;")
+    op.execute("DROP TABLE IF EXISTS intervention_arm_groups;")
     op.execute("DROP TABLE IF EXISTS interventions;")
     op.execute("DROP TABLE IF EXISTS conditions;")
     op.execute("DROP TABLE IF EXISTS sponsors;")

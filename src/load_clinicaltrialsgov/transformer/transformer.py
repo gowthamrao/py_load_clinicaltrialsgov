@@ -20,6 +20,7 @@ class Transformer:
         self.sponsors: List[Dict[str, Any]] = []
         self.conditions: List[Dict[str, Any]] = []
         self.interventions: List[Dict[str, Any]] = []
+        self.intervention_arm_groups: List[Dict[str, Any]] = []
         self.design_outcomes: List[Dict[str, Any]] = []
 
     def transform_study(self, study: Study, raw_study_payload: Dict[str, Any]) -> None:
@@ -40,6 +41,7 @@ class Transformer:
         self._transform_sponsors(nct_id, study)
         self._transform_conditions(nct_id, study)
         self._transform_interventions(nct_id, study)
+        self._transform_intervention_arm_groups(nct_id, study)
         self._transform_outcomes(nct_id, study)
 
     def _transform_raw_studies(
@@ -149,6 +151,22 @@ class Transformer:
                 }
             )
 
+    def _transform_intervention_arm_groups(self, nct_id: str, study: Study) -> None:
+        module = study.protocol_section.arms_interventions_module
+        if not module or not module.interventions:
+            return
+        for intervention in module.interventions:
+            if not intervention.arm_group_labels:
+                continue
+            for arm_group_label in intervention.arm_group_labels:
+                self.intervention_arm_groups.append(
+                    {
+                        "nct_id": nct_id,
+                        "intervention_name": intervention.name,
+                        "arm_group_label": arm_group_label,
+                    }
+                )
+
     def _transform_outcomes(self, nct_id: str, study: Study) -> None:
         module = study.protocol_section.outcomes_module
         if not module:
@@ -209,6 +227,7 @@ class Transformer:
             "sponsors": pd.DataFrame(self.sponsors),
             "conditions": pd.DataFrame(self.conditions),
             "interventions": pd.DataFrame(self.interventions),
+            "intervention_arm_groups": pd.DataFrame(self.intervention_arm_groups),
             "design_outcomes": pd.DataFrame(self.design_outcomes),
         }
         return {name: df for name, df in dataframes.items() if not df.empty}
@@ -219,4 +238,5 @@ class Transformer:
         self.sponsors.clear()
         self.conditions.clear()
         self.interventions.clear()
+        self.intervention_arm_groups.clear()
         self.design_outcomes.clear()

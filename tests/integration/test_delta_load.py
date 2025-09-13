@@ -9,7 +9,7 @@ from load_clinicaltrialsgov.transformer.transformer import Transformer
 from load_clinicaltrialsgov.orchestrator import Orchestrator
 
 # Import fixtures from the other test file
-from .test_full_etl import db_connector, postgres_container  # noqa: F401
+from .test_full_etl import db_connector # noqa: F401
 
 
 # A study that was last updated before the delta load
