@@ -57,11 +57,9 @@ def test_run_command_successful_full_load(
     )
     mock_transformer.get_dataframes.return_value = transformed_data
 
-    with (
-        patch("load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector),
-        patch("load_clinicaltrialsgov.cli.APIClient", return_value=mock_api_client),
-        patch("load_clinicaltrialsgov.cli.Transformer", return_value=mock_transformer),
-    ):
+    with patch("load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector), \
+         patch("load_clinicaltrialsgov.cli.APIClient", return_value=mock_api_client), \
+         patch("load_clinicaltrialsgov.cli.Transformer", return_value=mock_transformer):
         # Act
         result = runner.invoke(app, ["run", "--load-type", "full"])
 
@@ -106,11 +104,9 @@ def test_run_command_successful_delta_load(
     mock_api_client.get_all_studies.return_value = iter([study_payload])
     mock_transformer.get_dataframes.return_value = transformed_data
 
-    with (
-        patch("load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector),
-        patch("load_clinicaltrialsgov.cli.APIClient", return_value=mock_api_client),
-        patch("load_clinicaltrialsgov.cli.Transformer", return_value=mock_transformer),
-    ):
+    with patch("load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector), \
+         patch("load_clinicaltrialsgov.cli.APIClient", return_value=mock_api_client), \
+         patch("load_clinicaltrialsgov.cli.Transformer", return_value=mock_transformer):
         # Act
         result = runner.invoke(app, ["run", "--load-type", "delta"])
 
@@ -136,11 +132,9 @@ def test_run_command_api_error(
         "API is down", request=MagicMock()
     )
 
-    with (
-        patch("load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector),
-        patch("load_clinicaltrialsgov.cli.APIClient", return_value=mock_api_client),
-        patch("load_clinicaltrialsgov.cli.Transformer", return_value=mock_transformer),
-    ):
+    with patch("load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector), \
+         patch("load_clinicaltrialsgov.cli.APIClient", return_value=mock_api_client), \
+         patch("load_clinicaltrialsgov.cli.Transformer", return_value=mock_transformer):
         # Act
         result = runner.invoke(app, ["run"])
 
@@ -187,11 +181,9 @@ def test_run_command_sends_invalid_study_to_dlq(
     # No need to mock the transformer, as it won't be called for this record.
     mock_transformer = MagicMock()
 
-    with (
-        patch("load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector),
-        patch("load_clinicaltrialsgov.cli.APIClient", return_value=mock_api_client),
-        patch("load_clinicaltrialsgov.cli.Transformer", return_value=mock_transformer),
-    ):
+    with patch("load_clinicaltrialsgov.cli.get_connector", return_value=mock_connector), \
+         patch("load_clinicaltrialsgov.cli.APIClient", return_value=mock_api_client), \
+         patch("load_clinicaltrialsgov.cli.Transformer", return_value=mock_transformer):
         # Act
         result = runner.invoke(app, ["run", "--load-type", "full"])
 
