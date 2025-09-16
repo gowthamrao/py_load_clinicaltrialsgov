@@ -4,7 +4,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class APISettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="API_")
-    base_url: str = Field("https://clinicaltrials.gov/api/v2", description="base url for the api")
+    base_url: str = Field(
+        "https://clinicaltrials.gov/api/v2", description="base url for the api"
+    )
     timeout: int = Field(30, description="Timeout for API requests in seconds.")
     max_retries: int = Field(
         5, description="Maximum number of retries for failed API requests."

@@ -124,9 +124,6 @@ def test_fetch_page_retries_on_retryable_errors(retryable_status_code: int) -> N
     assert transport.call_count == 2
 
 
-from unittest.mock import MagicMock
-
-
 def test_api_call_retries_on_500() -> None:
     # Arrange
     responses: List[Tuple[int, dict[str, Any]] | Exception] = [
