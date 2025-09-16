@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
+  test-ubuntu:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -41,19 +41,96 @@ jobs:
         run: ruff format --check .
 
       - name: Run static type checker
-        run: |
-          source .venv/bin/activate
-          mypy .
+        run: mypy .
 
       - name: Run tests
+        run: pytest
+
+  test-macos:
+    runs-on: macos-latest
+    needs: test-ubuntu
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Configure uv
         run: |
-          source .venv/bin/activate
-          pytest
+          uv venv
+          echo ".venv/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        # The 'postgres' extra is required for integration tests
+        run: uv pip install -e .[dev,postgres]
+
+      - name: Run linter
+        run: ruff check .
+
+      - name: Check formatting
+        run: ruff format --check .
+
+      - name: Run static type checker
+        run: mypy .
+
+      - name: Run tests
+        run: pytest
+
+  test-windows:
+    runs-on: windows-latest
+    needs: test-macos
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Configure uv
+        shell: pwsh
+        run: |
+          uv venv
+          echo ".venv\Scripts" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Install dependencies
+        # The 'postgres' extra is required for integration tests
+        run: uv pip install -e .[dev,postgres]
+
+      - name: Run linter
+        run: ruff check .
+
+      - name: Check formatting
+        run: ruff format --check .
+
+      - name: Run static type checker
+        run: mypy .
+
+      - name: Run tests
+        run: pytest
 
   build-and-push:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
-    needs: test
+    needs: test-windows
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
