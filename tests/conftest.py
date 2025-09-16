@@ -11,8 +11,8 @@ from load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterfa
 
 @pytest.fixture(scope="session")
 def postgres_container() -> Generator[PostgresContainer, None, None]:
-    # Use a public ECR mirror to avoid Docker Hub rate limits in CI
-    image_name = "public.ecr.aws/bitnami/postgresql:15"
+    # Use the official postgres image. The ECR mirror is causing rate limit issues.
+    image_name = "postgres:15"
     with PostgresContainer(image_name, driver=None) as container:
         time.sleep(5)
         original_dsn = settings.db.dsn
