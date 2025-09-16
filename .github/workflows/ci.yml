@@ -70,6 +70,19 @@ jobs:
           uv venv
           echo ".venv/bin" >> $GITHUB_PATH
 
+      - name: Start Docker
+        run: |
+          open -bg /Applications/Docker.app
+          # Wait for Docker to start
+          for i in {1..60}; do
+            if docker info &>/dev/null; then
+              break
+            fi
+            echo "Waiting for Docker to start... ($i)"
+            sleep 1
+          done
+          docker info
+
       - name: Install dependencies
         # The 'postgres' extra is required for integration tests
         run: uv pip install -e .[dev,postgres]
@@ -110,6 +123,28 @@ jobs:
         run: |
           uv venv
           echo ".venv\Scripts" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Start Docker
+        shell: pwsh
+        run: |
+          Start-Process -FilePath "C:\Program Files\Docker\Docker\Docker Desktop.exe" -PassThru
+          Start-Sleep -s 30
+          $max_retries = 10
+          for ($i=0; $i -lt $max_retries; $i++) {
+            try {
+              docker info
+              if ($LASTEXITCODE -eq 0) {
+                Write-Host "Docker started successfully."
+                return
+              }
+            }
+            catch {
+              Write-Host "Waiting for Docker to start..."
+              Start-Sleep -s 10
+            }
+          }
+          Write-Error "Docker did not start within the allotted time."
+          exit 1
 
       - name: Install dependencies
         # The 'postgres' extra is required for integration tests
