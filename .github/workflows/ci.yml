@@ -13,8 +13,6 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         python-version: ["3.8", "3.9", "3.10", "3.11"]
-    env:
-      DOCKER_HOST: ${{ runner.os == 'Windows' && 'npipe:////./pipe/docker_engine' || '' }}
 
     steps:
       - name: Checkout code
@@ -41,6 +39,11 @@ jobs:
           uv venv
           echo "$PWD/.venv/bin" >> $GITHUB_PATH
         shell: bash
+
+      - name: Set DOCKER_HOST for Windows
+        if: runner.os == 'Windows'
+        run: Add-Content -Path $env:GITHUB_ENV -Value "DOCKER_HOST=npipe:////./pipe/docker_engine"
+        shell: pwsh
 
       - name: Install dependencies
         # The 'postgres' extra is required for integration tests
