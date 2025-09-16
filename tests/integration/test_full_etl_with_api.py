@@ -3,16 +3,11 @@ import json
 from testcontainers.postgres import PostgresContainer
 from load_clinicaltrialsgov.connectors.postgres import PostgresConnector
 from load_clinicaltrialsgov.connectors.interface import DatabaseConnectorInterface
-from load_clinicaltrialsgov.config import settings
 from load_clinicaltrialsgov.orchestrator import Orchestrator
 from load_clinicaltrialsgov.extractor.api_client import APIClient
 from load_clinicaltrialsgov.transformer.transformer import Transformer
 
-from alembic.config import Config
-from alembic import command
 
-
-import time
 from typing import Generator, cast
 from unittest.mock import patch
 
