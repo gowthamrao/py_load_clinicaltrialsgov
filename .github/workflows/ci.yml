@@ -40,6 +40,10 @@ jobs:
           echo "$PWD/.venv/bin" >> $GITHUB_PATH
         shell: bash
 
+      - name: Set DOCKER_HOST for Windows
+        if: runner.os == 'Windows'
+        run: echo "DOCKER_HOST=npipe:////./pipe/docker_engine" >> $GITHUB_ENV
+
       - name: Install dependencies
         # The 'postgres' extra is required for integration tests
         run: uv pip install -e .[dev,postgres]
