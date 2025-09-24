@@ -7,7 +7,6 @@
 #
 # Commercial use beyond a 30-day trial requires a separate license.
 
-
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
