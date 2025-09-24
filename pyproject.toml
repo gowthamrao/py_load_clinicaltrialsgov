@@ -4,9 +4,9 @@ version = "0.1.0"
 description = "An ETL package for loading data from ClinicalTrials.gov V2 API into a relational database."
 readme = "README.md"
 authors = [
-    { name = "Gowtham Rao", email = "rao@ohdsi.org" }
+    { name = "Gowtham Adamane Rao", email = "rao@ohdsi.org" }
 ]
-license = "Apache-2.0"
+license = { file = "LICENSE.md" }
 requires-python = ">=3.11,<4.0"
 dependencies = [
     "httpx",
@@ -28,7 +28,7 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: Apache Software License",
+    "License :: Other/Proprietary License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
