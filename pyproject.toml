@@ -1,0 +1,74 @@
+[project]
+name = "py_load_clinicaltrialsgov"
+version = "0.1.0"
+description = "An ETL package for loading data from ClinicalTrials.gov V2 API into a relational database."
+readme = "README.md"
+authors = [
+    { name = "Gowtham Rao", email = "rao@ohdsi.org" }
+]
+license = "Apache-2.0"
+requires-python = ">=3.11,<4.0"
+dependencies = [
+    "httpx",
+    "pydantic",
+    "typer[all]",
+    "tenacity",
+    "pandas",
+    "pyarrow",
+    "pydantic-settings",
+    "structlog",
+    "alembic",
+    "SQLAlchemy",
+    "python-dateutil (>=2.9.0.post0,<3.0.0)",
+    "types-sqlalchemy (>=1.4.53.38,<2.0.0.0)",
+    "types-python-dateutil (>=2.9.0.20250822,<3.0.0.0)",
+    "psycopg[binary] (>=3.2.10,<4.0.0)"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Utilities",
+]
+keywords = ["clinicaltrials.gov", "etl", "api", "ohdsi"]
+
+[project.urls]
+Homepage = "https://github.com/gowthamrao/py_load_clinicaltrialsgov"
+Source = "https://github.com/gowthamrao/py_load_clinicaltrialsgov"
+
+[tool.poetry]
+packages = [{include = "load_clinicaltrialsgov", from = "src"}]
+
+[tool.poetry.group.dev.dependencies]
+testcontainers = "^4.13.0"
+
+[project.optional-dependencies]
+postgres = ["psycopg[binary]"]
+dev = [
+    "ruff",
+    "mypy",
+    "pytest",
+    "pytest-cov",
+    "testcontainers",
+    "pre-commit",
+    "types-python-dateutil",
+    "pytest-structlog"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.format]
+line-ending = "lf"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/load_clinicaltrialsgov"]

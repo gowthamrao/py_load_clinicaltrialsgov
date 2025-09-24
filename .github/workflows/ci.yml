@@ -1,0 +1,131 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  unit-tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.11', '3.12']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv venv
+          uv pip install -e .[dev,postgres]
+        shell: bash
+
+      - name: Run linter
+        run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            .venv/Scripts/ruff check .
+          else
+            .venv/bin/ruff check .
+          fi
+        shell: bash
+
+      - name: Check formatting
+        run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            .venv/Scripts/ruff format --check .
+          else
+            .venv/bin/ruff format --check .
+          fi
+        shell: bash
+
+      - name: Run static type checker
+        run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            .venv/Scripts/mypy .
+          else
+            .venv/bin/mypy .
+          fi
+        shell: bash
+
+      - name: Run unit tests
+        run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            .venv/Scripts/pytest -m "not integration"
+          else
+            .venv/bin/pytest -m "not integration"
+          fi
+        shell: bash
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv venv
+          uv pip install -e .[dev,postgres]
+        shell: bash
+
+      - name: Pull postgres docker image
+        run: docker pull bitnami/postgresql:15
+
+      - name: Run integration tests
+        run: |
+          .venv/bin/pytest -m "integration"
+        shell: bash
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    needs: [unit-tests, integration-tests]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: gowthamrao/py-load-clinicaltrialsgov
+          tags: |
+            type=ref,event=branch
+            type=sha
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
