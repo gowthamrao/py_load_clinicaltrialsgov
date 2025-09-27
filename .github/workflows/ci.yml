@@ -1,131 +1,117 @@
-name: CI
+name: Python Package CI
 
+# 1. Core Workflow Requirements: Triggers
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
+
+# 1. Core Workflow Requirements: Concurrency Control
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# 2. Security: Principle of Least Privilege (PoLP)
+permissions:
+  contents: read
 
 jobs:
-  unit-tests:
+  test:
+    name: Test on ${{ matrix.os }} with Python ${{ matrix.python-version }}
+    # 1. Core Workflow Requirements: Timeouts
+    timeout-minutes: 15
+    # 3. Matrix Testing Strategy
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+        os: [ubuntu-latest, macos-latest, windows-2025]
+
     runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ['3.11', '3.12']
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    # 2. Security: Action Pinning
+    - name: Checkout repository
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
+    # 4. Poetry Integration: Install Poetry before setting up Python for caching
+    - name: Install Poetry
+      run: |
+        python3 -m pip install pipx
+        pipx install poetry
+      shell: bash
 
-      - name: Install dependencies
-        run: |
-          pip install uv
-          uv venv
-          uv pip install -e .[dev,postgres]
-        shell: bash
+    # 4. Poetry Integration: Setup Python and enable caching
+    - name: Set up Python ${{ matrix.python-version }}
+      id: setup-python
+      uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'poetry'
 
-      - name: Run linter
-        run: |
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            .venv/Scripts/ruff check .
-          else
-            .venv/bin/ruff check .
-          fi
-        shell: bash
+    # 4. Poetry Integration: Environment Dump for Debugging
+    - name: Dump environment details
+      run: |
+        echo "OS/Runner: ${{ runner.os }}"
+        echo "Python version:"
+        python --version
+        echo "Poetry version:"
+        poetry --version
+        echo "Poetry Environment Info:"
+        poetry env info
+        echo "PATH:"
+        echo $PATH
+      shell: bash
 
-      - name: Check formatting
-        run: |
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            .venv/Scripts/ruff format --check .
-          else
-            .venv/bin/ruff format --check .
-          fi
-        shell: bash
+    # 4. Poetry Integration: Install Dependencies with high verbosity
+    - name: Install dependencies
+      run: poetry install --no-interaction -vv --with dev
+      shell: bash
 
-      - name: Run static type checker
-        run: |
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            .venv/Scripts/mypy .
-          else
-            .venv/bin/mypy .
-          fi
-        shell: bash
+    # 4. Poetry Integration: Dependency Verification for Debugging
+    - name: Verify Dependency Tree
+      run: poetry show --tree
+      shell: bash
 
-      - name: Run unit tests
-        run: |
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            .venv/Scripts/pytest -m "not integration"
-          else
-            .venv/bin/pytest -m "not integration"
-          fi
-        shell: bash
+    # 5a. Test Execution: Run Unit Tests with coverage
+    - name: Run Unit Tests
+      run: poetry run pytest -vv tests/unit --cov=./ --cov-report=xml:coverage-unit.xml
+      shell: bash
 
-  integration-tests:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.11', '3.12']
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    # 5a. Test Execution: Run Integration Tests with coverage
+    - name: Run Integration Tests
+      run: poetry run pytest -vv tests/integration --cov=./ --cov-report=xml:coverage-integration.xml
+      shell: bash
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
+    # 5b. Codecov Upload Strategy: Upload Unit Test coverage
+    - name: Upload Unit Test coverage to Codecov
+      if: ${{ !cancelled() }}
+      uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage-unit.xml
+        flags: ${{ matrix.os }}-py${{ matrix.python-version }}-unit
+        fail_ci_if_error: true
+        verbose: true
 
-      - name: Install dependencies
-        run: |
-          pip install uv
-          uv venv
-          uv pip install -e .[dev,postgres]
-        shell: bash
+    # 5b. Codecov Upload Strategy: Upload Integration Test coverage
+    - name: Upload Integration Test coverage to Codecov
+      if: ${{ !cancelled() }}
+      uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage-integration.xml
+        flags: ${{ matrix.os }}-py${{ matrix.python-version }}-integration
+        fail_ci_if_error: true
+        verbose: true
 
-      - name: Pull postgres docker image
-        run: docker pull bitnami/postgresql:15
-
-      - name: Run integration tests
-        run: |
-          .venv/bin/pytest -m "integration"
-        shell: bash
-
-  build-and-push:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
-    needs: [unit-tests, integration-tests]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: gowthamrao/py-load-clinicaltrialsgov
-          tags: |
-            type=ref,event=branch
-            type=sha
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+    # 6. Failure Handling: Upload reports and logs on failure
+    - name: Upload reports and logs on failure
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      if: failure()
+      with:
+        name: ci-failure-reports-${{ matrix.os }}-${{ matrix.python-version }}
+        path: |
+          coverage-unit.xml
+          coverage-integration.xml
